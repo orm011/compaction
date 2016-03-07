@@ -14,7 +14,7 @@ data({0,0,0,0,
 
 template <typename F> void testfun(F * fun){
   auto data_ptr  = (int*)(aligned_alloc(32, 16*sizeof(int)));
-  std::copy(data.begin(), data.end(), data_ptr); // malloc is 16 byte aligned
+  copy(data.begin(), data.end(), data_ptr);
   
   auto ans = fun(data_ptr, data.size(), 2, 8);
   ASSERT_EQ(8, get<0>(ans));
