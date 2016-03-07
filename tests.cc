@@ -1,6 +1,7 @@
 #include "gtest/gtest.h"
 #include "impl.h"
 #include <array>
+#include <algorithm>
 
 using namespace std;
 
@@ -13,7 +14,7 @@ data({0,0,0,0,
 
 template <typename F> void testfun(F * fun){
   auto data_ptr  = (int*)(aligned_alloc(32, 16*sizeof(int)));
-  memcpy(data_ptr, data.data(), 16); // malloc is 16 byte aligned
+  std::copy(data.begin(), data.end(), data_ptr); // malloc is 16 byte aligned
   
   auto ans = fun(data_ptr, data.size(), 2, 8);
   ASSERT_EQ(8, get<0>(ans));
