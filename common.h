@@ -17,12 +17,25 @@
 #include <thread>
 #include <utility>
 #include <unordered_map>
+#include <memory>
 
 #ifndef EMULATE
 #include <immintrin.h>
 #else
 #include <avxintrin-emu.h>
 #endif
+
+static const size_t k_vecsize = 8;
+
+//32 byte alignment for avx2. 64 in case of avxknc
+static const size_t k_align = 64;
+
+template <typename T> auto allocate_aligned(int size){
+  auto del = [](auto *p){ _mm_free(p); };
+  return std::unique_ptr<T, decltype(del)>((T*)_mm_malloc(size*sizeof(T), k_align),
+		       del);
+}
+
 
 inline int MarsagliaXOR(int *p_seed) {
     int seed = *p_seed;
@@ -54,7 +67,6 @@ template <typename T> T* allocate(size_t len, size_t byte_alignment = 64) {
 }
 
 #define as_array(r) ((int32_t*)(&(r)))
-static const size_t k_vecsize = 8;
 static const __m256i _minus1 = _mm256_set1_epi32(0xffffffff);
 static const __m256i _ones = _mm256_set1_epi32(1);
 

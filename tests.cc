@@ -2,6 +2,7 @@
 #include "impl.h"
 #include <array>
 #include <algorithm>
+#include "common.h"
 
 using namespace std;
 
@@ -13,7 +14,9 @@ data({0,0,0,0,
       });
 
 template <typename F> void testfun(F * fun){
-  auto data_ptr  = (int*)(aligned_alloc(32, 16*sizeof(int)));
+  auto data_ptr_unq  = allocate_aligned<int>(32);
+  auto data_ptr = data_ptr_unq.get();
+  
   copy(data.begin(), data.end(), data_ptr);
   
   auto ans = fun(data_ptr, data.size(), 2, 8);

@@ -25,7 +25,9 @@ void init_data(int *d, int len)
 }
 
 template <typename Func> void bm_template(benchmark::State & state, Func f){
-  int * data = new int[FLAGS_array_size_ints] {};
+  auto data_unq = allocate_aligned<int>(FLAGS_array_size_ints);
+
+  auto data = data_unq.get();
   init_data(data, FLAGS_array_size_ints);
 
   tuple<int, int, int> expected = count_naive(data, FLAGS_array_size_ints, FLAGS_limit_lower, FLAGS_limit_upper);
