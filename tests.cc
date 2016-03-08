@@ -38,6 +38,10 @@ TEST(count, count_mask){
   testfun(count_mask);
 }
 
+TEST(count, count_mask_2unroll){
+	testfun(count_mask_2unroll);
+}
+
 int main(int argc, char **argv) {
   ::testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();
