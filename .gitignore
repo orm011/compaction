@@ -1,0 +1,9 @@
+.*
+CMakeCache.txt
+CMakeFiles/*
+build.ninja
+rules.ninja
+cmake_install.cmake
+pin-log.txt
+runbench
+runtests
