@@ -13,7 +13,7 @@ data({0,0,0,0,
       8,8,8,8
       });
 
-template <typename F> void testfun(F * fun){
+template <typename F> void testfun(F * fun) {
   auto data_ptr_unq  = allocate_aligned<int>(32);
   auto data_ptr = data_ptr_unq.get();
   
@@ -30,16 +30,69 @@ template <typename F> void testfun(F * fun){
   ASSERT_EQ(4, get<2>(ans));
 }
 
-TEST(count, count_naive){
+
+
+
+TEST(count, naive){
   testfun(count_naive);
 }
 
-TEST(count, count_mask){
+TEST(count, mask){
   testfun(count_mask);
 }
 
-TEST(count, count_mask_2unroll){
+TEST(count, mask_2unroll){
 	testfun(count_mask_2unroll);
+}
+
+__declspec (align(64)) int brand[] =
+{ 1, 2, 3, 4, 2, 3, 2, 1};
+
+__declspec (align(64)) int container[] =
+{ 1, 4, 3, 4, 4, 3, 2, 1};
+
+__declspec (align(64)) int quantity[] =
+{ 9,10,11,12,13,14,15,16};
+
+__declspec (align(64)) int eprice[] =
+{ 1, 1, 1, 1, 1, 1, 1, 1};
+
+__declspec (align(64)) int discount[] =
+{99,99,99,99,99,99,99};
+
+// should qualify:
+// 1, 1, 0, 0, 1, 0, 0, 0
+q19params test_params =  {
+	.brand1 = 1,
+	.container1 = 1,
+	.max_quantity1 = 11,
+	.brand2 = 2,
+	.container2 = 4,
+	.max_quantity2 = 15
+};
+
+
+template <typename F> void testq19(F f){
+	lineitem_parts d;
+	d.len = 8;
+	d.eprice = eprice;
+	d.discount = discount;
+	d.quantity = quantity;
+
+	d.container = container;
+	d.brand = brand;
+		
+	auto result = f(d, test_params);
+	ASSERT_EQ(3, result);
+}
+
+
+TEST(q19lite, all_masked) {
+	testq19(q19lite_all_masked);
+}
+
+TEST(q19lite, all_branched) {
+	testq19(q19lite_all_branched);
 }
 
 int main(int argc, char **argv) {

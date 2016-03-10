@@ -1,4 +1,5 @@
 #include "common.h"
+#include "impl.h"
 
 using namespace std;
 
@@ -96,3 +97,52 @@ tuple<int,int,int> count_mask_2unroll(int *d, int len, int lim1, int lim2) {
   
   return make_tuple(len - counter1, counter1 - counter2, counter2);
 }
+
+
+/* based on tpch q19
+	 the main idea is that the predicate combinations are different. 
+(though related)
+
+d.brand[i] == 1 & d.container == 1 & d.quantity >= 1 & quantity <= 11
+|
+d.brand[i] == 1 & d.container == 1 & d.quantity >= 1 & quantity <= 11
+*/
+int q19lite_all_masked(const lineitem_parts &d, q19params p)
+{
+	int64_t total = 0;
+
+	for (int i = 0; i < d.len; ++i) {
+		int64_t mask =
+			(d.brand[i] == p.brand1 &
+			 d.container[i] == p.container1 &
+			 d.quantity[i] <= p.max_quantity1 ) |
+			(d.brand[i] == p.brand2 &
+			 d.container[i] == p.container2 &
+			 d.quantity[i] <= p.max_quantity2 );
+		
+		total += mask & (((int64_t)d.eprice[i]) * (100 - d.discount[i]));
+	}
+
+	return total;
+}
+
+
+int q19lite_all_branched (const lineitem_parts &d, q19params p) {
+	
+	uint64_t total = 0;
+	for (int i = 0; i < d.len; ++i) {
+		if ((d.brand[i] == p.brand1 &&
+				d.container[i] == p.container1 &&
+				d.quantity[i] <= p.max_quantity1  ) || 
+			(d.brand[i] == p.brand2 &&
+			 d.container[i] == p.container2  &&
+			 d.quantity[i] <= p.max_quantity2 ))
+	{			
+		total +=  ((int64_t)d.eprice[i]) * (100 - d.discount[i]);
+	}
+	}
+
+	return total;
+}
+
+

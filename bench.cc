@@ -56,9 +56,14 @@ void bm_count_mask(benchmark::State & state) {
   bm_template(state, count_mask);
 }
 
+void bm_count_mask_2unroll(benchmark::State & state) {
+  bm_template(state, count_mask_2unroll);
+}
+
+
 BENCHMARK(bm_count_naive);
 BENCHMARK(bm_count_mask);
-
+BENCHMARK(bm_count_mask_2unroll);
 
 int main(int argc, char** argv) {
   gflags::ParseCommandLineFlags(&argc, &argv, false);
