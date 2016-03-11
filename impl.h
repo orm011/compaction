@@ -11,23 +11,24 @@ std::tuple<int,int,int>
 
 
 struct lineitem_parts {
-	size_t len;
-	int * eprice;
-	int * discount;
-	int * quantity;
+	size_t len {};
 
-	int * container;
-	int * brand;
+	int * brand {};
+	int * container {};
+	int * quantity {} ;
+
+	int * eprice {};
+	int * discount {};
 };
 
 struct q19params  {
 	int brand1;
-	int container1;
-	int max_quantity1;
+	int container1 ;
+	int max_quantity1 ;
 
-	int brand2;
-	int container2;
-	int max_quantity2;
+	int brand2 ;
+	int container2 ;
+	int max_quantity2 ;
 };
 
 int q19lite_all_masked(const lineitem_parts &, q19params);

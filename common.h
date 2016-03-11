@@ -36,6 +36,7 @@ template <typename T> auto allocate_aligned(int size){
 		       del);
 }
 
+template <typename T> using aligned_ptr =  decltype(allocate_aligned<T>(0));
 
 inline int MarsagliaXOR(int *p_seed) {
     int seed = *p_seed;
