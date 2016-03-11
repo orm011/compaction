@@ -5,8 +5,12 @@
 #include "common.h"
 #include "impl.h"
 #include "gtest/gtest.h"
+#include <string>
+using namespace std;
 
-DEFINE_int32(array_size_ints, 1<<10, "data size");
+
+DEFINE_int32(array_size_ints, 1<<10, "data size (num elements)");
+DEFINE_int32(array_size_mb, -1, "data size (MB)");
 DEFINE_int32(limit_lower, 64, "lower limit");
 DEFINE_int32(limit_upper, 96, "upper limit");
 
@@ -17,12 +21,13 @@ DEFINE_double(benchmark_min_time, 1, "min time seconds");
 DEFINE_string(benchmark_format,"tabular", "<tabular|json|csv>)");
 DEFINE_bool(benchmark_list_tests, false, "{true|false}");
 
+
 const int k_max = 128;
 const int middle = k_max >> 1;
 const int quarter = middle >> 1;
 const int threeq = middle + quarter;
 
-using namespace std;
+
 
 void init_data(int *d, int len, int max)
 {
@@ -34,26 +39,19 @@ void init_data(int *d, int len, int max)
 
 template <typename Func> void bm_template(benchmark::State & state, Func f){
   auto data_unq = allocate_aligned<int>(FLAGS_array_size_ints);
-
   auto data = data_unq.get();
   init_data(data, FLAGS_array_size_ints, k_max);
 
   tuple<int, int, int> expected = count_naive(data, FLAGS_array_size_ints, FLAGS_limit_lower, FLAGS_limit_upper);
 
-  tuple<int, int, int> rec;
+  tuple<int, int, int> rec {};
   while (state.KeepRunning()) {
     rec = f(data, FLAGS_array_size_ints, FLAGS_limit_lower, FLAGS_limit_upper);
   } 
 
-  if (get<0>(expected) != get<0>(rec)){
-    cout << "output mismatch at elt 0";
-    if (get<1>(expected) != get<1>(rec)){
-      cout << "output mismatch at 1";
-    } if (get<2>(expected) != get<2>(rec)) {
-      cout << "output mistmatch at 2";
-    }
-  }
-  
+	ASSERT_EQ(get<0>(expected), get<0>(rec));
+	ASSERT_EQ(get<1>(expected), get<1>(rec));
+  ASSERT_EQ(get<2>(expected), get<2>(rec));
 }
 
 
@@ -139,7 +137,13 @@ BENCHMARK(bm_q19lite_all_branched);
 int main(int argc, char** argv) {
 	gflags::SetUsageMessage("usage");	
 	gflags::ParseCommandLineFlags(&argc, &argv, false);
+
+	if (FLAGS_array_size_mb > 0) {
+		FLAGS_array_size_ints = FLAGS_array_size_mb * ((1 << 20) >> 2); // 4 bytes per int
+		cout << "NOTE: Array size set to " << FLAGS_array_size_ints << " int elements " << endl;
+	}
 	
   ::benchmark::Initialize(&argc, argv);
   ::benchmark::RunSpecifiedBenchmarks();
+
 }
