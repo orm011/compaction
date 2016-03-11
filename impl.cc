@@ -1,5 +1,7 @@
 #include "common.h"
 #include "impl.h"
+#include <tbb/tbb.h>
+
 
 using namespace std;
 
@@ -104,43 +106,63 @@ tuple<int,int,int> count_mask_2unroll(int *d, int len, int lim1, int lim2) {
 */
 int q19lite_all_masked(const lineitem_parts &d, q19params p)
 {
-	int64_t total = 0;
 
-	for (int i = 0; i < d.len; ++i) {
-		int64_t mask =
-			(d.brand[i] == p.brand1 &
-			 d.container[i] == p.container1 &
-			 d.quantity[i] < p.max_quantity1 ) |
-			(d.brand[i] == p.brand2 &
-			 d.container[i] == p.container2 &
-			 d.quantity[i] < p.max_quantity2 );
+	using namespace tbb;
+	
+	auto body = 	[&](const auto & range, int64_t init) -> int {
+	
+		int64_t total = init;
+		for (int i = range.begin(); i < range.end(); ++i) {
+			int64_t mask =
+				(d.brand[i] == p.brand1 &
+				 d.container[i] == p.container1 &
+				 d.quantity[i] < p.max_quantity1 ) |
+				(d.brand[i] == p.brand2 &
+				 d.container[i] == p.container2 &
+				 d.quantity[i] < p.max_quantity2 );
 
-		total += (~(mask-1)) &  (((int64_t)d.eprice[i]) * (100 - d.discount[i]));
-	}
+			total += (~(mask-1)) &  (((int64_t)d.eprice[i]) * (100 - d.discount[i]));
+		}
 
-	return total;
+		return total;
+	};
+
+	return parallel_reduce(blocked_range<size_t>(0, d.len, 1<<10), 0,
+									body, [](auto x, auto y) { return x + y; });
+
 }
 
 
 int q19lite_all_branched (const lineitem_parts &d, q19params p) {
+	using namespace tbb;
 	
-	int64_t total = 0;
-	for (int i = 0; i < d.len; ++i) {
-		int mask = (d.brand[i] == p.brand1 &&
-				d.container[i] == p.container1 &&
-				d.quantity[i] < p.max_quantity1  ) || 
+	auto body = 	[&](const auto & range, int64_t init) -> int {
+
+		int64_t total = init;
+		for (int i = range.begin(); i < range.end(); ++i) {
+
+			int mask =
+			(d.brand[i] == p.brand1 &&
+			 d.container[i] == p.container1 &&
+			 d.quantity[i] < p.max_quantity1  ) || 
 			(d.brand[i] == p.brand2 &&
 			 d.container[i] == p.container2  &&
 			 d.quantity[i] < p.max_quantity2 );
+		
+			if (mask)
+				{
+					total +=  ((int64_t)d.eprice[i]) * (100 - d.discount[i]);
+				}
 
-		if (mask)
-	{
+		}
 
-		total +=  ((int64_t)d.eprice[i]) * (100 - d.discount[i]);
-	}
-	}
+		return  total;
+	};
 
-	return total;
+	return parallel_reduce(blocked_range<size_t>(0, d.len, 1<<10), 0,
+									body, [](auto x, auto y) { return x + y; });
+
 }
 
+	
 

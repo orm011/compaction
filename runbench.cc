@@ -6,6 +6,8 @@
 #include "impl.h"
 #include "gtest/gtest.h"
 #include <string>
+#include <tbb/tbb.h>
+
 using namespace std;
 
 
@@ -13,6 +15,7 @@ DEFINE_int32(array_size_ints, 1<<10, "data size (num elements)");
 DEFINE_int32(array_size_mb, -1, "data size (MB)");
 DEFINE_int32(limit_lower, 64, "lower limit");
 DEFINE_int32(limit_upper, 96, "upper limit");
+DEFINE_int32(threads, 4, "upper limit");
 
 DEFINE_string(benchmark_filter, ".*", "filter regex");
 DEFINE_int32(benchmark_repetitions, 1, "repetitions");
@@ -101,6 +104,7 @@ void init_q19data() {
 
 template <typename Func> void q19_template(benchmark::State & state, Func f) {
 
+
 	if (!g_q19data.brand){
 		init_q19data();
 		q19_expected = -1;
@@ -109,7 +113,8 @@ template <typename Func> void q19_template(benchmark::State & state, Func f) {
   if ( q19_expected < 0) {
 		q19_expected = q19lite_all_branched(g_q19data, params);
 	}
-	
+
+
 	int res = 0;
   while (state.KeepRunning()) {
     res = f(g_q19data, params);
@@ -135,15 +140,16 @@ BENCHMARK(bm_q19lite_all_masked);
 BENCHMARK(bm_q19lite_all_branched);
 
 int main(int argc, char** argv) {
+	
 	gflags::SetUsageMessage("usage");	
 	gflags::ParseCommandLineFlags(&argc, &argv, false);
 
 	if (FLAGS_array_size_mb > 0) {
 		FLAGS_array_size_ints = FLAGS_array_size_mb * ((1 << 20) >> 2); // 4 bytes per int
 		cout << "NOTE: Array size set to " << FLAGS_array_size_ints << " int elements " << endl;
-	}
+	}	
 	
   ::benchmark::Initialize(&argc, argv);
+	tbb::task_scheduler_init init(FLAGS_threads);
   ::benchmark::RunSpecifiedBenchmarks();
-
 }
