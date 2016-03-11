@@ -102,11 +102,19 @@ tuple<int,int,int> count_mask_2unroll(int *d, int len, int lim1, int lim2) {
   return make_tuple(len - counter1, counter1 - counter2, counter2);
 }
 
+#define Q19PRED($d,$i,$p,$AND,$OR) \
+	((($d).brand[($i)] == ($p).brand) $AND \
+	 (($d).quantity[($i)] < ($p).max_quantity) $AND \
+	 (($d).quantity[($i)] >= ($p).min_quantity) $AND \
+	 ( ($d).container[($i)] == ($p).container[0] $OR \
+		 ($d).container[($i)] == ($p).container[1] $OR \
+		 ($d).container[($i)] == ($p).container[2] $OR \
+		 ($d).container[($i)] == ($p).container[3] $OR ))
 
 /* based on tpch q19
 	 the main idea is that the predicate combinations are different. 
 */
-int q19lite_all_masked(const lineitem_parts &d, q19params p)
+int q19lite_all_masked(const lineitem_parts &d, q19params p1, q19params p2, q19params p3)
 {
 
 	using namespace tbb;
@@ -115,56 +123,37 @@ int q19lite_all_masked(const lineitem_parts &d, q19params p)
 	
 		int64_t total = init;
 		for (int i = range.begin(); i < range.end(); ++i) {
-			int64_t mask =
-				(d.brand[i] == p.brand1 &
-				 d.container[i] == p.container1 &
-				 d.quantity[i] < p.max_quantity1 ) |
-				(d.brand[i] == p.brand2 &
-				 d.container[i] == p.container2 &
-				 d.quantity[i] < p.max_quantity2 );
-
+			int64_t mask = Q19PRED(d, i, p1, &, |) | Q19PRED(d,i,p2,&,|) | Q19PRED(d,i,p3,&,|);
 			total += (~(mask-1)) &  (((int64_t)d.eprice[i]) * (100 - d.discount[i]));
 		}
 
 		return total;
 	};
 
-	return parallel_reduce(blocked_range<size_t>(0, d.len, 1<<10), 0,
+	return parallel_reduce(blocked_range<size_t>(0, d.len, FLAGS_grain_size), 0,
 									body, [](auto x, auto y) { return x + y; });
 
 }
 
 
-int q19lite_all_branched (const lineitem_parts &d, q19params p) {
+int q19lite_all_branched (const lineitem_parts &d, q19params p1, q19params p2, q19params p3) {
 	using namespace tbb;
 	
 	auto body = 	[&](const auto & range, int64_t init) -> int {
-
 		int64_t total = init;
 		for (int i = range.begin(); i < range.end(); ++i) {
+			int64_t mask = Q19PRED(d, i, p1, &&, ||) || Q19PRED(d,i,p2,&&,||) || Q19PRED(d,i,p3,&,||);
 
-			int mask =
-			(d.brand[i] == p.brand1 &&
-			 d.container[i] == p.container1 &&
-			 d.quantity[i] < p.max_quantity1  ) || 
-			(d.brand[i] == p.brand2 &&
-			 d.container[i] == p.container2  &&
-			 d.quantity[i] < p.max_quantity2 );
-		
 			if (mask)
 				{
 					total +=  ((int64_t)d.eprice[i]) * (100 - d.discount[i]);
 				}
-
 		}
 
 		return  total;
 	};
 
-	return parallel_reduce(blocked_range<size_t>(0, d.len, 1<<10), 0,
+	return parallel_reduce(blocked_range<size_t>(0, d.len, FLAGS_grain_size), 0,
 									body, [](auto x, auto y) { return x + y; });
 
 }
-
-	
-

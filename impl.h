@@ -15,21 +15,18 @@ struct lineitem_parts {
 
 	int * brand {};
 	int * container {};
-	int * quantity {} ;
-
+	int * quantity {};
+	
 	int * eprice {};
 	int * discount {};
 };
 
 struct q19params  {
-	int brand1;
-	int container1 ;
-	int max_quantity1 ;
-
-	int brand2 ;
-	int container2 ;
-	int max_quantity2 ;
+	int brand;
+	int container[4] ;
+	int max_quantity ;
+	int min_quantity ;
 };
 
-int q19lite_all_masked(const lineitem_parts &, q19params);
-int q19lite_all_branched(const lineitem_parts &, q19params);
+int q19lite_all_masked(const lineitem_parts &, q19params, q19params, q19params);
+int q19lite_all_branched(const lineitem_parts &, q19params, q19params, q19params);
