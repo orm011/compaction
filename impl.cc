@@ -1,7 +1,9 @@
 #include "common.h"
 #include "impl.h"
 #include <tbb/tbb.h>
+#include <gflags/gflags.h>
 
+DEFINE_int32(grain_size, 1 << 12, "minimum amount of work (num array elts)");
 
 using namespace std;
 

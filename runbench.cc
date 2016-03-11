@@ -30,14 +30,20 @@ const int middle = k_max >> 1;
 const int quarter = middle >> 1;
 const int threeq = middle + quarter;
 
-
-
 void init_data(int *d, int len, int max)
 {
-  unsigned int seed = 0;
-  for (int i =0 ; i < len; ++i){
-    d[i] = rand_r(&seed) % max;
-  }
+
+	using namespace tbb;
+	task_scheduler_init init_enable(4); // reference always runs serially
+	
+	auto body = [&](const auto &r) {
+		unsigned int seed = r.begin(); // make the seed unique by range.
+		for (int i = r.begin(); i < r.end(); ++i) {
+			d[i] = rand_r(&seed) % max;
+		}
+	};
+	
+	parallel_for(blocked_range<size_t>(0, len, 1<<12), body);
 }
 
 template <typename Func> void bm_template(benchmark::State & state, Func f){
@@ -111,6 +117,7 @@ template <typename Func> void q19_template(benchmark::State & state, Func f) {
 	}
 	
   if ( q19_expected < 0) {
+		tbb::task_scheduler_init init_disable(1); // reference always runs serially
 		q19_expected = q19lite_all_branched(g_q19data, params);
 	}
 
