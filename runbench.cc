@@ -105,7 +105,7 @@ q19params params3 = {
 lineitem_parts g_q19data;
 
 void init_q19data() {
-	vector<int> max_values({4, 6, 20, 10, 90});
+	vector<int> max_values({10, 15, 20, 10, 90});
 	/*brand, container, quantity, eprice, discount */
 	vector<aligned_ptr<int>> alloc;
 	for (int i =0;i < max_values.size(); ++i) {
@@ -132,6 +132,7 @@ template <typename Func> void q19_template(benchmark::State & state, Func f) {
   if ( q19_expected.count < 0) {
 		tbb::task_scheduler_init init_disable(1); // reference always runs serially
 		q19_expected = q19lite_all_branched(g_q19data, params1, params2, params3);
+		cerr << "selectivity: " << q19_expected.count << "/" << g_q19data.len << " (" << ((double)(q19_expected.count))/g_q19data.len  << ")" << endl;
 	}
 
 
@@ -140,6 +141,7 @@ template <typename Func> void q19_template(benchmark::State & state, Func f) {
     res = f(g_q19data, params1, params2, params3);
   }
 
+	
 	ASSERT_EQ(q19_expected.count, res.count);
 	ASSERT_EQ(q19_expected.sum, res.sum);
 }

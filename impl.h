@@ -30,7 +30,6 @@ struct q19params  {
 
 struct q19res {
 	int64_t sum;
-
 	int64_t count;
 };
 
