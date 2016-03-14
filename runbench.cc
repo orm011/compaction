@@ -78,16 +78,29 @@ void bm_count_mask_2unroll(benchmark::State & state) {
 }
 
 
-int q19_expected = -1;
-q19params params =  {
-	.brand1 = 1,
-	.container1 = 1,
-	.max_quantity1 = 11,
-	
-	.brand2 = 2,
-	.container2 = 4,
-	.max_quantity2 = 15,
+q19res q19_expected = {-1, -1};
+
+q19params params1 =  {
+	.brand = 1,
+	.container = {1,2,3,4},
+	.max_quantity = 11,
+	.min_quantity = 1
 };
+
+q19params params2 = {
+	.brand = 2,
+	.container = {5,6,7,8},
+	.max_quantity = 15,
+	.min_quantity = 5
+};
+
+q19params params3 = {
+	.brand = 3,
+	.container = {9,10,11,12},
+	.max_quantity = 20,
+	.min_quantity = 10
+};
+
 
 lineitem_parts g_q19data;
 
@@ -113,21 +126,22 @@ template <typename Func> void q19_template(benchmark::State & state, Func f) {
 
 	if (!g_q19data.brand){
 		init_q19data();
-		q19_expected = -1;
+		ASSERT_EQ(q19_expected.sum, -1);
 	}
 	
-  if ( q19_expected < 0) {
+  if ( q19_expected.count < 0) {
 		tbb::task_scheduler_init init_disable(1); // reference always runs serially
-		q19_expected = q19lite_all_branched(g_q19data, params);
+		q19_expected = q19lite_all_branched(g_q19data, params1, params2, params3);
 	}
 
 
-	int res = 0;
+	q19res res = {0,0};
   while (state.KeepRunning()) {
-    res = f(g_q19data, params);
+    res = f(g_q19data, params1, params2, params3);
   }
 
-	ASSERT_EQ(q19_expected, res);
+	ASSERT_EQ(q19_expected.count, res.count);
+	ASSERT_EQ(q19_expected.sum, res.sum);
 }
 
 void bm_q19lite_all_masked(benchmark::State & state) {

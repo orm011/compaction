@@ -109,51 +109,55 @@ tuple<int,int,int> count_mask_2unroll(int *d, int len, int lim1, int lim2) {
 	 ( ($d).container[($i)] == ($p).container[0] $OR \
 		 ($d).container[($i)] == ($p).container[1] $OR \
 		 ($d).container[($i)] == ($p).container[2] $OR \
-		 ($d).container[($i)] == ($p).container[3] $OR ))
+		 ($d).container[($i)] == ($p).container[3] ))
+
+
+static const q19res  init = {.count = 0, .sum = 0};
+static const auto addq19 = [](const q19res &x, const q19res & y) -> q19res { q19res ans; ans.count = x.count + y.count;  ans.sum = (x.sum + y.sum); return ans; };
 
 /* based on tpch q19
 	 the main idea is that the predicate combinations are different. 
 */
-int q19lite_all_masked(const lineitem_parts &d, q19params p1, q19params p2, q19params p3)
+q19res q19lite_all_masked(const lineitem_parts &d, q19params p1, q19params p2, q19params p3)
 {
 
 	using namespace tbb;
 	
-	auto body = 	[&](const auto & range, int64_t init) -> int {
+	auto body = 	[&](const auto & range, const auto & init)  {
 	
-		int64_t total = init;
+		auto total = init;
 		for (int i = range.begin(); i < range.end(); ++i) {
 			int64_t mask = Q19PRED(d, i, p1, &, |) | Q19PRED(d,i,p2,&,|) | Q19PRED(d,i,p3,&,|);
-			total += (~(mask-1)) &  (((int64_t)d.eprice[i]) * (100 - d.discount[i]));
+			total.sum += (~(mask-1)) &  (((int64_t)d.eprice[i]) * (100 - d.discount[i]));
+			total.count += mask;
 		}
 
 		return total;
 	};
 
-	return parallel_reduce(blocked_range<size_t>(0, d.len, FLAGS_grain_size), 0,
-									body, [](auto x, auto y) { return x + y; });
 
+	return parallel_reduce(blocked_range<size_t>(0, d.len, FLAGS_grain_size), init, body, addq19);
 }
 
 
-int q19lite_all_branched (const lineitem_parts &d, q19params p1, q19params p2, q19params p3) {
+q19res q19lite_all_branched (const lineitem_parts &d, q19params p1, q19params p2, q19params p3) {
 	using namespace tbb;
 	
-	auto body = 	[&](const auto & range, int64_t init) -> int {
-		int64_t total = init;
+	auto body = 	[&](const auto & range, const auto & init)  {
+		q19res total = init;
 		for (int i = range.begin(); i < range.end(); ++i) {
-			int64_t mask = Q19PRED(d, i, p1, &&, ||) || Q19PRED(d,i,p2,&&,||) || Q19PRED(d,i,p3,&,||);
+			int64_t mask = Q19PRED(d, i, p1, &&, ||) || Q19PRED(d,i,p2,&&,||) || Q19PRED(d,i,p3,&&,||);
 
 			if (mask)
 				{
-					total +=  ((int64_t)d.eprice[i]) * (100 - d.discount[i]);
+					total.sum +=  ((int64_t)d.eprice[i]) * (100 - d.discount[i]);
+					total.count += 1;
 				}
 		}
 
 		return  total;
 	};
 
-	return parallel_reduce(blocked_range<size_t>(0, d.len, FLAGS_grain_size), 0,
-									body, [](auto x, auto y) { return x + y; });
+	return parallel_reduce(blocked_range<size_t>(0, d.len, FLAGS_grain_size), init, body, addq19);
 
 }

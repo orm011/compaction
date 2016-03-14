@@ -28,5 +28,12 @@ struct q19params  {
 	int min_quantity ;
 };
 
-int q19lite_all_masked(const lineitem_parts &, q19params, q19params, q19params);
-int q19lite_all_branched(const lineitem_parts &, q19params, q19params, q19params);
+struct q19res {
+	int64_t sum;
+
+	int64_t count;
+};
+
+
+q19res q19lite_all_masked(const lineitem_parts &, q19params, q19params, q19params);
+q19res q19lite_all_branched(const lineitem_parts &, q19params, q19params, q19params);

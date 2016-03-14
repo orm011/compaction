@@ -58,19 +58,23 @@ __declspec (align(64)) int eprice[] =
 { 1, 1, 1, 1, 1, 1, 1, 1};
 
 __declspec (align(64)) int discount[] =
-{99,99,99,99,99,99,99};
+{98,98,98,98,98,98,98};
 
 // should qualify:
 // 1, 1, 0, 0, 1, 0, 0, 0
-q19params test_params =  {
-	.brand1 = 1,
-	.container1 = 1,
-	.max_quantity1 = 11,
-	.brand2 = 2,
-	.container2 = 4,
-	.max_quantity2 = 15
+q19params test_params1 =  {
+	.brand = 1,
+	.container = {1,1,1,1},
+	.max_quantity = 11,
+	.min_quantity = 0,
 };
 
+q19params test_params2 = {
+	.brand = 2,
+	.container = {4,4,4,4},
+	.max_quantity = 15,
+	.min_quantity = 0,
+};
 
 template <typename F> void testq19(F f){
 	lineitem_parts d;
@@ -82,8 +86,9 @@ template <typename F> void testq19(F f){
 	d.container = container;
 	d.brand = brand;
 		
-	auto result = f(d, test_params);
-	ASSERT_EQ(3, result);
+	auto result = f(d, test_params1, test_params2, test_params2);
+	ASSERT_EQ(3, result.count);
+	ASSERT_EQ(6, result.sum);
 }
 
 
