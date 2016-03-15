@@ -46,6 +46,24 @@ void init_data(int *d, int len, int max)
 	parallel_for(blocked_range<size_t>(0, len, 1<<12), body);
 }
 
+
+void init_char(int8_t *d, int len, int8_t max)
+{
+
+	using namespace tbb;
+	task_scheduler_init init_enable(4); // reference always runs serially
+	
+	auto body = [&](const auto &r) {
+		unsigned int seed = r.begin(); // make the seed unique by range.
+		for (int i = r.begin(); i < r.end(); ++i) {
+			d[i] = rand_r(&seed) % max;
+		}
+	};
+	
+	parallel_for(blocked_range<size_t>(0, len, 1<<12), body);
+}
+
+
 template <typename Func> void bm_template(benchmark::State & state, Func f){
   auto data_unq = allocate_aligned<int>(FLAGS_array_size_ints);
   auto data = data_unq.get();
@@ -107,18 +125,22 @@ lineitem_parts g_q19data;
 void init_q19data() {
 	vector<int> max_values({10, 15, 20, 10, 90});
 	/*brand, container, quantity, eprice, discount */
-	vector<aligned_ptr<int>> alloc;
-	for (int i =0;i < max_values.size(); ++i) {
-		alloc.push_back(allocate_aligned<int>(FLAGS_array_size_ints));
-		init_data(alloc.back().get(), FLAGS_array_size_ints, max_values[i]);
-	}
-
 	g_q19data.len = FLAGS_array_size_ints;
-	g_q19data.brand = alloc[0].release();
-	g_q19data.container = alloc[1].release();
-	g_q19data.quantity = alloc[2].release();
-	g_q19data.eprice = alloc[3].release();
-	g_q19data.discount = alloc[4].release();
+
+	g_q19data.brand = allocate_aligned<int8_t>(FLAGS_array_size_ints).release();
+	init_char(g_q19data.brand, FLAGS_array_size_ints, max_values[0]);
+	
+	g_q19data.container = allocate_aligned<int8_t>(FLAGS_array_size_ints).release();
+	init_char(g_q19data.container, FLAGS_array_size_ints, max_values[1]);
+
+	g_q19data.quantity = allocate_aligned<int32_t>(FLAGS_array_size_ints).release();
+	init_data(g_q19data.quantity, FLAGS_array_size_ints, max_values[2]);
+
+	g_q19data.eprice = allocate_aligned<int32_t>(FLAGS_array_size_ints).release();
+	init_data(g_q19data.eprice, FLAGS_array_size_ints, max_values[2]);
+
+	g_q19data.discount = allocate_aligned<int8_t>(FLAGS_array_size_ints).release();
+	init_char(g_q19data.discount, FLAGS_array_size_ints, max_values[4]);
 }
 
 template <typename Func> void q19_template(benchmark::State & state, Func f) {

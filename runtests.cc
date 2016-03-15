@@ -45,19 +45,19 @@ TEST(count, mask_2unroll){
 	testfun(count_mask_2unroll);
 }
 
-__declspec (align(64)) int brand[] =
+__declspec (align(64)) int8_t brand[] =
 { 1, 2, 3, 4, 2, 3, 2, 1};
 
-__declspec (align(64)) int container[] =
+__declspec (align(64)) int8_t container[] =
 { 1, 4, 3, 4, 4, 3, 2, 1};
 
-__declspec (align(64)) int quantity[] =
+__declspec (align(64)) int32_t quantity[] =
 { 9,10,11,12,13,14,15,16};
 
-__declspec (align(64)) int eprice[] =
+__declspec (align(64)) int32_t eprice[] =
 { 1, 1, 1, 1, 1, 1, 1, 1};
 
-__declspec (align(64)) int discount[] =
+__declspec (align(64)) int8_t discount[] =
 {98,98,98,98,98,98,98};
 
 // should qualify:

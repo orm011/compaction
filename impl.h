@@ -13,19 +13,19 @@ std::tuple<int,int,int>
 struct lineitem_parts {
 	size_t len {};
 
-	int * brand {};
-	int * container {};
-	int * quantity {};
+	int8_t * brand {};
+	int8_t * container {};
+	int32_t * quantity {};
 	
-	int * eprice {};
-	int * discount {};
+	int32_t * eprice {};
+	int8_t * discount {};
 };
 
 struct q19params  {
-	int brand;
-	int container[4] ;
-	int max_quantity ;
-	int min_quantity ;
+	int8_t brand;
+	int8_t container[4] ;
+	int32_t max_quantity ;
+	int32_t min_quantity ;
 };
 
 struct q19res {
