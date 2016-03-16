@@ -45,9 +45,6 @@ template <typename T, typename C> void init_data(T *d, size_t len, C max)
 	};
 	
 	parallel_for(blocked_range<size_t>(0, len, 1<<12), body);
-	if (FLAGS_sorted) {
-		parallel_sort(d, d + len);
-	}
 }
 
 
@@ -110,24 +107,30 @@ q19params params3 = {
 lineitem_parts g_q19data;
 
 void init_q19data() {
+	using namespace tbb;
 	vector<int> max_values({10, 15, 20, 10, 90});
 	/*brand, container, quantity, eprice, discount */
-	g_q19data.len = FLAGS_array_size_ints;
-
-	g_q19data.brand = allocate_aligned<int8_t>(FLAGS_array_size_ints).release();
-	init_data(g_q19data.brand, FLAGS_array_size_ints, max_values[0]);
+	g_q19data = alloc_lineitem_parts(FLAGS_array_size_ints);
 	
-	g_q19data.container = allocate_aligned<int8_t>(FLAGS_array_size_ints).release();
+	init_data(g_q19data.brand, FLAGS_array_size_ints, max_values[0]);
 	init_data(g_q19data.container, FLAGS_array_size_ints, max_values[1]);
-
-	g_q19data.quantity = allocate_aligned<int32_t>(FLAGS_array_size_ints).release();
 	init_data(g_q19data.quantity, FLAGS_array_size_ints, max_values[2]);
-
-	g_q19data.eprice = allocate_aligned<int32_t>(FLAGS_array_size_ints).release();
 	init_data(g_q19data.eprice, FLAGS_array_size_ints, max_values[2]);
-
-	g_q19data.discount = allocate_aligned<int8_t>(FLAGS_array_size_ints).release();
 	init_data(g_q19data.discount, FLAGS_array_size_ints, max_values[4]);
+
+	if (FLAGS_sorted) {
+		auto rows = allocate_aligned<q19row>(g_q19data.len);
+		col_to_row(g_q19data, rows.get());
+		auto compareQ19Row = [](const q19row &l, const q19row &r){
+			return
+			((l.brand < r.brand)) ||
+			((l.brand == r.brand) && (l.container < r.container)) ||
+			((l.brand == r.brand) && (l.container == r.container) && (l.quantity < r.quantity));		
+		};
+
+		parallel_sort(rows.get(), rows.get() + g_q19data.len, compareQ19Row);
+		row_to_col(rows.get(), g_q19data);
+	}
 }
 
 template <typename Func> void q19_template(benchmark::State & state, Func f) {

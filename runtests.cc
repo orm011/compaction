@@ -76,6 +76,29 @@ q19params test_params2 = {
 	.min_quantity = 0,
 };
 
+TEST(util, col_to_row_to_col){
+	lineitem_parts d;
+	d.len = 8;
+	d.eprice = eprice;
+	d.discount = discount;
+	d.quantity = quantity;
+
+	d.container = container;
+	d.brand = brand;
+
+	auto rows = allocate_aligned<q19row>(d.len);
+	col_to_row(d, rows.get());
+	lineitem_parts newcols = alloc_lineitem_parts(d.len);
+	row_to_col(rows.get(), newcols);
+
+	ASSERT_EQ(d.len, newcols.len);
+	ASSERT_TRUE(std::equal(d.brand, d.brand + d.len, newcols.brand));
+	ASSERT_TRUE(std::equal(d.container, d.container + d.len, newcols.container));
+	ASSERT_TRUE(std::equal(d.quantity, d.quantity + d.len, newcols.quantity));
+	ASSERT_TRUE(std::equal(d.eprice, d.eprice + d.len, newcols.eprice));
+	ASSERT_TRUE(std::equal(d.discount, d.discount + d.len, newcols.discount));
+}
+
 template <typename F> void testq19(F f){
 	lineitem_parts d;
 	d.len = 8;

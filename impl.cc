@@ -5,6 +5,38 @@
 
 DEFINE_int32(grain_size, 1 << 12, "minimum amount of work (num array elts)");
 
+void col_to_row(const lineitem_parts & columns, q19row *rows){
+	using namespace tbb;
+	auto body = [&](const auto & r){
+		for (int i = r.begin(); i < r.end(); ++i){
+			rows[i].brand = columns.brand[i];
+			rows[i].container = columns.container[i];
+			rows[i].discount = columns.discount[i];
+			rows[i].eprice = columns.eprice[i];
+			rows[i].quantity = columns.quantity[i];
+		}
+	};
+
+	parallel_for(blocked_range<size_t>(0, columns.len, FLAGS_grain_size),  body);
+}
+
+
+void row_to_col(const q19row *rows, lineitem_parts &columns){
+	using namespace tbb;
+	auto body = [&](const auto & r){
+		for (int i = r.begin(); i < r.end(); ++i){
+			columns.brand[i] = rows[i].brand;
+			columns.container[i] = rows[i].container;
+			columns.discount[i] = rows[i].discount;
+			columns.eprice[i] = rows[i].eprice;
+			columns.quantity[i] = rows[i].quantity;
+		}
+	};
+
+	parallel_for(blocked_range<size_t>(0, columns.len, FLAGS_grain_size), body);
+}
+
+
 using namespace std;
 
 tuple<int,int,int> count_naive(int *d, int len, int lim1, int lim2) {
