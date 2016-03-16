@@ -16,6 +16,8 @@ DEFINE_int32(array_size_mb, -1, "data size (MB)");
 DEFINE_int32(limit_lower, 64, "lower limit");
 DEFINE_int32(limit_upper, 96, "upper limit");
 DEFINE_int32(threads, 4, "upper limit");
+DEFINE_bool(sorted, false, "sorted");
+
 
 DEFINE_string(benchmark_filter, ".*", "filter regex");
 DEFINE_int32(benchmark_repetitions, 1, "repetitions");
@@ -30,11 +32,10 @@ const int middle = k_max >> 1;
 const int quarter = middle >> 1;
 const int threeq = middle + quarter;
 
-void init_data(int *d, int len, int max)
+template <typename T, typename C> void init_data(T *d, size_t len, C max)
 {
 
 	using namespace tbb;
-	task_scheduler_init init_enable(4); // reference always runs serially
 	
 	auto body = [&](const auto &r) {
 		unsigned int seed = r.begin(); // make the seed unique by range.
@@ -44,23 +45,9 @@ void init_data(int *d, int len, int max)
 	};
 	
 	parallel_for(blocked_range<size_t>(0, len, 1<<12), body);
-}
-
-
-void init_char(int8_t *d, int len, int8_t max)
-{
-
-	using namespace tbb;
-	task_scheduler_init init_enable(4); // reference always runs serially
-	
-	auto body = [&](const auto &r) {
-		unsigned int seed = r.begin(); // make the seed unique by range.
-		for (int i = r.begin(); i < r.end(); ++i) {
-			d[i] = rand_r(&seed) % max;
-		}
-	};
-	
-	parallel_for(blocked_range<size_t>(0, len, 1<<12), body);
+	if (FLAGS_sorted) {
+		parallel_sort(d, d + len);
+	}
 }
 
 
@@ -128,10 +115,10 @@ void init_q19data() {
 	g_q19data.len = FLAGS_array_size_ints;
 
 	g_q19data.brand = allocate_aligned<int8_t>(FLAGS_array_size_ints).release();
-	init_char(g_q19data.brand, FLAGS_array_size_ints, max_values[0]);
+	init_data(g_q19data.brand, FLAGS_array_size_ints, max_values[0]);
 	
 	g_q19data.container = allocate_aligned<int8_t>(FLAGS_array_size_ints).release();
-	init_char(g_q19data.container, FLAGS_array_size_ints, max_values[1]);
+	init_data(g_q19data.container, FLAGS_array_size_ints, max_values[1]);
 
 	g_q19data.quantity = allocate_aligned<int32_t>(FLAGS_array_size_ints).release();
 	init_data(g_q19data.quantity, FLAGS_array_size_ints, max_values[2]);
@@ -140,7 +127,7 @@ void init_q19data() {
 	init_data(g_q19data.eprice, FLAGS_array_size_ints, max_values[2]);
 
 	g_q19data.discount = allocate_aligned<int8_t>(FLAGS_array_size_ints).release();
-	init_char(g_q19data.discount, FLAGS_array_size_ints, max_values[4]);
+	init_data(g_q19data.discount, FLAGS_array_size_ints, max_values[4]);
 }
 
 template <typename Func> void q19_template(benchmark::State & state, Func f) {
