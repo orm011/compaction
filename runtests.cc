@@ -6,45 +6,6 @@
 
 using namespace std;
 
-array<int, 16>
-data({0,0,0,0,
-      2,2,2,2,
-      4,4,4,4,
-      8,8,8,8
-      });
-
-template <typename F> void testfun(F * fun) {
-  auto data_ptr_unq  = allocate_aligned<int>(32);
-  auto data_ptr = data_ptr_unq.get();
-  
-  copy(data.begin(), data.end(), data_ptr);
-  
-  auto ans = fun(data_ptr, data.size(), 2, 8);
-  ASSERT_EQ(8, get<0>(ans));
-  ASSERT_EQ(8, get<1>(ans));
-  ASSERT_EQ(0, get<2>(ans));
-
-  ans = fun(data_ptr, data.size(), 2, 4);
-  ASSERT_EQ(8, get<0>(ans));
-  ASSERT_EQ(4, get<1>(ans));
-  ASSERT_EQ(4, get<2>(ans));
-}
-
-
-
-
-TEST(count, naive){
-  testfun(count_naive);
-}
-
-TEST(count, mask){
-  testfun(count_mask);
-}
-
-TEST(count, mask_2unroll){
-	testfun(count_mask_2unroll);
-}
-
 __declspec (align(64)) int8_t brand[] =
 { 1, 2, 3, 4, 2, 3, 2, 1};
 

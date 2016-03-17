@@ -48,38 +48,6 @@ template <typename T, typename C> void init_data(T *d, size_t len, C max)
 }
 
 
-template <typename Func> void bm_template(benchmark::State & state, Func f){
-  auto data_unq = allocate_aligned<int>(FLAGS_array_size_ints);
-  auto data = data_unq.get();
-  init_data(data, FLAGS_array_size_ints, k_max);
-
-  tuple<int, int, int> expected = count_naive(data, FLAGS_array_size_ints, FLAGS_limit_lower, FLAGS_limit_upper);
-
-  tuple<int, int, int> rec {};
-  while (state.KeepRunning()) {
-    rec = f(data, FLAGS_array_size_ints, FLAGS_limit_lower, FLAGS_limit_upper);
-  } 
-
-	ASSERT_EQ(get<0>(expected), get<0>(rec));
-	ASSERT_EQ(get<1>(expected), get<1>(rec));
-  ASSERT_EQ(get<2>(expected), get<2>(rec));
-}
-
-
-
-void bm_count_naive(benchmark::State & state) {
-  bm_template(state, count_naive);
-}
-
-void bm_count_mask(benchmark::State & state) {
-  bm_template(state, count_mask);
-}
-
-void bm_count_mask_2unroll(benchmark::State & state) {
-  bm_template(state, count_mask_2unroll);
-}
-
-
 q19res q19_expected = {-1, -1};
 
 q19params params1 =  {
@@ -167,10 +135,6 @@ void bm_q19lite_all_branched(benchmark::State & state) {
   q19_template(state, q19lite_all_branched);
 }
 
-
-BENCHMARK(bm_count_naive);
-BENCHMARK(bm_count_mask);
-BENCHMARK(bm_count_mask_2unroll);
 BENCHMARK(bm_q19lite_all_masked);
 BENCHMARK(bm_q19lite_all_branched);
 
