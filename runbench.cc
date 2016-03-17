@@ -136,9 +136,15 @@ void bm_q19lite_all_branched(benchmark::State & state) {
 }
 
 
+void bm_q19lite_vectorized_assume_sorted(benchmark::State & state) {
+  q19_template(state, q19lite_vectorized_assume_sorted);
+}
+
+
 BENCHMARK(bm_q19lite_all_masked_vectorized);
 BENCHMARK(bm_q19lite_all_masked_scalar);
 BENCHMARK(bm_q19lite_all_branched);
+BENCHMARK(bm_q19lite_vectorized_assume_sorted);
 
 int main(int argc, char** argv) {
 	
