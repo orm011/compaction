@@ -10,7 +10,6 @@
 
 using namespace std;
 
-
 DEFINE_int32(array_size_ints, 1<<10, "data size (num elements)");
 DEFINE_int32(array_size_mb, -1, "data size (MB)");
 DEFINE_int32(limit_lower, 64, "lower limit");
@@ -18,14 +17,12 @@ DEFINE_int32(limit_upper, 96, "upper limit");
 DEFINE_int32(threads, 4, "upper limit");
 DEFINE_bool(sorted, false, "sorted");
 
-
 DEFINE_string(benchmark_filter, ".*", "filter regex");
 DEFINE_int32(benchmark_repetitions, 1, "repetitions");
 DEFINE_int32(v, 1, "verbosity");
 DEFINE_double(benchmark_min_time, 1, "min time seconds");
 DEFINE_string(benchmark_format,"tabular", "<tabular|json|csv>)");
 DEFINE_bool(benchmark_list_tests, false, "{true|false}");
-
 
 const int k_max = 128;
 const int middle = k_max >> 1;
@@ -126,16 +123,21 @@ template <typename Func> void q19_template(benchmark::State & state, Func f) {
 	ASSERT_EQ(q19_expected.sum, res.sum);
 }
 
-void bm_q19lite_all_masked(benchmark::State & state) {
-  q19_template(state, q19lite_all_masked);
+void bm_q19lite_all_masked_vectorized(benchmark::State & state) {
+  q19_template(state, q19lite_all_masked_vectorized);
 }
 
+void bm_q19lite_all_masked_scalar(benchmark::State & state) {
+  q19_template(state, q19lite_all_masked_scalar);
+}
 
 void bm_q19lite_all_branched(benchmark::State & state) {
   q19_template(state, q19lite_all_branched);
 }
 
-BENCHMARK(bm_q19lite_all_masked);
+
+BENCHMARK(bm_q19lite_all_masked_vectorized);
+BENCHMARK(bm_q19lite_all_masked_scalar);
 BENCHMARK(bm_q19lite_all_branched);
 
 int main(int argc, char** argv) {

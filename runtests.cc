@@ -76,8 +76,12 @@ template <typename F> void testq19(F f){
 }
 
 
-TEST(q19lite, all_masked) {
-	testq19(q19lite_all_masked);
+TEST(q19lite, all_masked_scalar) {
+	testq19(q19lite_all_masked_scalar);
+}
+
+TEST(q19lite, all_masked_vectorized) {
+	testq19(q19lite_all_masked_vectorized);
 }
 
 TEST(q19lite, all_branched) {
