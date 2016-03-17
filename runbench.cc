@@ -10,7 +10,7 @@
 
 using namespace std;
 
-DEFINE_int32(array_size_ints, 1<<10, "data size (num elements)");
+DEFINE_int32(array_size_elts, 1<<10, "data size (num elements)");
 DEFINE_int32(array_size_mb, -1, "data size (MB)");
 DEFINE_int32(limit_lower, 64, "lower limit");
 DEFINE_int32(limit_upper, 96, "upper limit");
@@ -75,13 +75,13 @@ void init_q19data() {
 	using namespace tbb;
 	vector<int> max_values({10, 15, 20, 10, 90});
 	/*brand, container, quantity, eprice, discount */
-	g_q19data = alloc_lineitem_parts(FLAGS_array_size_ints);
+	g_q19data = alloc_lineitem_parts(FLAGS_array_size_elts);
 	
-	init_data(g_q19data.brand, FLAGS_array_size_ints, max_values[0]);
-	init_data(g_q19data.container, FLAGS_array_size_ints, max_values[1]);
-	init_data(g_q19data.quantity, FLAGS_array_size_ints, max_values[2]);
-	init_data(g_q19data.eprice, FLAGS_array_size_ints, max_values[2]);
-	init_data(g_q19data.discount, FLAGS_array_size_ints, max_values[4]);
+	init_data(g_q19data.brand, FLAGS_array_size_elts, max_values[0]);
+	init_data(g_q19data.container, FLAGS_array_size_elts, max_values[1]);
+	init_data(g_q19data.quantity, FLAGS_array_size_elts, max_values[2]);
+	init_data(g_q19data.eprice, FLAGS_array_size_elts, max_values[2]);
+	init_data(g_q19data.discount, FLAGS_array_size_elts, max_values[4]);
 
 	if (FLAGS_sorted) {
 		auto rows = allocate_aligned<q19row>(g_q19data.len);
@@ -144,7 +144,7 @@ void bm_q19lite_vectorized_assume_sorted(benchmark::State & state) {
 BENCHMARK(bm_q19lite_all_masked_vectorized);
 BENCHMARK(bm_q19lite_all_masked_scalar);
 BENCHMARK(bm_q19lite_all_branched);
-BENCHMARK(bm_q19lite_vectorized_assume_sorted);
+//BENCHMARK(bm_q19lite_vectorized_assume_sorted);
 
 int main(int argc, char** argv) {
 	
@@ -152,8 +152,8 @@ int main(int argc, char** argv) {
 	gflags::ParseCommandLineFlags(&argc, &argv, false);
 
 	if (FLAGS_array_size_mb > 0) {
-		FLAGS_array_size_ints = FLAGS_array_size_mb * ((1 << 20) >> 2); // 4 bytes per int
-		cout << "NOTE: Array size set to " << FLAGS_array_size_ints << " int elements " << endl;
+		FLAGS_array_size_elts = FLAGS_array_size_mb * ((1 << 20)/sizeof(data_t)); 
+		cout << "NOTE: Elt size is " << sizeof(data_t) << ". Array size set to " << FLAGS_array_size_elts << " elements." << endl;
 	}	
 	
   ::benchmark::Initialize(&argc, argv);

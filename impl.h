@@ -1,7 +1,11 @@
 #include <utility>
 #include "common.h"
 
-typedef int8_t data_t;
+#ifndef DATA_T
+typedef int32_t data_t;
+#else
+typedef DATA_T data_t;
+#endif
 
 struct lineitem_parts {
 	size_t len {};

@@ -76,7 +76,6 @@ q19res q19lite_all_masked_vectorized(const lineitem_parts &d, q19params p1, q19p
 		return total;
 	};
 
-
 	return parallel_reduce(blocked_range<size_t>(0, d.len, FLAGS_grain_size), init, body, addq19);
 }
 
