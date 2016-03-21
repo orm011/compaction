@@ -75,7 +75,7 @@ lineitem_parts g_q19data;
 
 void init_q19data() {
 	using namespace tbb;
-	vector<int> max_values({10, 15, 20, 10, 90});
+	vector<int> max_values({40, 15, 20, 10, 90});
 	/*brand, container, quantity, eprice, discount */
 	g_q19data = alloc_lineitem_parts(FLAGS_array_size_elts);
 	
