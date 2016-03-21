@@ -7,6 +7,7 @@
 #include "gtest/gtest.h"
 #include <string>
 #include <tbb/tbb.h>
+#include <cpucounters.h>
 
 using namespace std;
 
@@ -28,6 +29,7 @@ const int k_max = 128;
 const int middle = k_max >> 1;
 const int quarter = middle >> 1;
 const int threeq = middle + quarter;
+PCM * m = nullptr;
 
 template <typename T, typename C> void init_data(T *d, size_t len, C max)
 {
@@ -114,10 +116,16 @@ template <typename Func> void q19_template(benchmark::State & state, Func f) {
 
 
 	q19res res = {0,0};
+	SocketCounterState before = m->getSocketCounterState(0);
   while (state.KeepRunning()) {
     res = f(g_q19data, params1, params2, params3);
   }
-
+	SocketCounterState after = m->getSocketCounterState(0);
+	
+	uint64 read =  getBytesReadFromMC (before, after);
+	uint64 write =  getBytesWrittenToMC (before, after);
+	cout  << "MBs read from MC: " << (read >> 20) << endl;
+	cout  << "MBs written to MC: " << (write >> 20) << endl;
 	
 	ASSERT_EQ(q19_expected.count, res.count);
 	ASSERT_EQ(q19_expected.sum, res.sum);
@@ -158,5 +166,35 @@ int main(int argc, char** argv) {
 	
   ::benchmark::Initialize(&argc, argv);
 	tbb::task_scheduler_init init(FLAGS_threads);
+
+
+	m = PCM::getInstance();	
+	PCM::ErrorCode status = m->program();
+	// program counters, and on a failure just exit
+	switch (status)
+		{
+		case PCM::Success:
+			break;
+		case PCM::MSRAccessDenied:
+			cerr << "Access to Intel(r) Performance Counter Monitor has denied (no MSR or PCI CFG space access)." << endl;
+			exit(EXIT_FAILURE);
+		case PCM::PMUBusy:
+			cerr << "Access to Intel(r) Performance Counter Monitor has denied (Performance Monitoring Unit is occupied by other application). Try to stop the application that uses PMU." << endl;
+			cerr << "Alternatively you can try to reset PMU configuration at your own risk. Try to reset? (y/n)" << endl;
+			char yn;
+			std::cin >> yn;
+			if ('y' == yn)
+				{
+					m->resetPMU();
+					cerr << "PMU configuration has been reset. Try to rerun the program again." << endl;
+				}
+			exit(EXIT_FAILURE);
+		default:
+			cerr << "Access to Intel(r) Performance Counter Monitor has denied (Unknown error)." << endl;
+			exit(EXIT_FAILURE);
+		}
+	
   ::benchmark::RunSpecifiedBenchmarks();
+
+	m->cleanup();
 }
