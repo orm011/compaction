@@ -58,19 +58,19 @@ q19params params1 =  {
 	.min_quantity = 1
 };
 
-q19params params2 = {
-	.brand = 2,
-	.container = {5,6,7,8},
-	.max_quantity = 15,
-	.min_quantity = 5
-};
+// q19params params2 = {
+// 	.brand = 2,
+// 	.container = {5,6,7,8},
+// 	.max_quantity = 15,
+// 	.min_quantity = 5
+// };
 
-q19params params3 = {
-	.brand = 3,
-	.container = {9,10,11,12},
-	.max_quantity = 20,
-	.min_quantity = 10
-};
+// q19params params3 = {
+// 	.brand = 3,
+// 	.container = {9,10,11,12},
+// 	.max_quantity = 20,
+// 	.min_quantity = 10
+// };
 
 
 lineitem_parts g_q19data;
@@ -113,7 +113,7 @@ template <typename Func> void q19_template(benchmark::State & state, Func f) {
 	
   if ( q19_expected.count < 0) {
 		tbb::task_scheduler_init init_disable(1); // reference always runs serially
-		q19_expected = q19lite_all_branched(g_q19data, params1, params2, params3);
+		q19_expected = q19lite_all_branched(g_q19data, params1);
 		cerr << "selectivity: " << q19_expected.count << "/" << g_q19data.len << " (" << ((double)(q19_expected.count))/g_q19data.len  << ")" << endl;
 	}
 
@@ -121,7 +121,7 @@ template <typename Func> void q19_template(benchmark::State & state, Func f) {
 	q19res res = {0,0};
 	SocketCounterState before = m->getSocketCounterState(0);
   while (state.KeepRunning()) {
-    res = f(g_q19data, params1, params2, params3);
+    res = f(g_q19data, params1);
   }
 	SocketCounterState after = m->getSocketCounterState(0);
 	
@@ -147,15 +147,9 @@ void bm_q19lite_all_branched(benchmark::State & state) {
 }
 
 
-void bm_q19lite_vectorized_assume_sorted(benchmark::State & state) {
-  q19_template(state, q19lite_vectorized_assume_sorted);
-}
-
-
 BENCHMARK(bm_q19lite_all_masked_vectorized);
 BENCHMARK(bm_q19lite_all_masked_scalar);
 BENCHMARK(bm_q19lite_all_branched);
-//BENCHMARK(bm_q19lite_vectorized_assume_sorted);
 
 int main(int argc, char** argv) {
 	

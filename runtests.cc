@@ -70,9 +70,9 @@ template <typename F> void testq19(F f){
 	d.container = container;
 	d.brand = brand;
 		
-	auto result = f(d, test_params1, test_params2, test_params2);
-	ASSERT_EQ(3, result.count);
-	ASSERT_EQ(6, result.sum);
+	auto result = f(d, test_params1);
+	ASSERT_EQ(1, result.count);
+	ASSERT_EQ(2, result.sum);
 }
 
 

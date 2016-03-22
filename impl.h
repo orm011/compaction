@@ -57,8 +57,6 @@ inline lineitem_parts alloc_lineitem_parts (size_t len)
 	return ans;
 }
 
-q19res q19lite_all_masked_scalar(const lineitem_parts &, q19params, q19params, q19params);
-q19res q19lite_all_masked_vectorized(const lineitem_parts &, q19params, q19params, q19params);
-q19res q19lite_all_branched(const lineitem_parts &, q19params, q19params, q19params);
-
-q19res q19lite_vectorized_assume_sorted(const lineitem_parts &d, q19params p1, q19params p2, q19params p3);
+q19res q19lite_all_masked_scalar(const lineitem_parts &, q19params);
+q19res q19lite_all_masked_vectorized(const lineitem_parts &, q19params);
+q19res q19lite_all_branched(const lineitem_parts &, q19params);

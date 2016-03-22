@@ -58,7 +58,7 @@ static const auto addq19 = [](const q19res &x, const q19res & y) -> q19res { q19
 /* based on tpch q19
 	 the main idea is that the predicate combinations are different. 
 */
-q19res q19lite_all_masked_vectorized(const lineitem_parts &d, q19params p1, q19params p2, q19params p3)
+q19res q19lite_all_masked_vectorized(const lineitem_parts &d, q19params p1)
 {
 
 	using namespace tbb;
@@ -68,7 +68,7 @@ q19res q19lite_all_masked_vectorized(const lineitem_parts &d, q19params p1, q19p
 		auto total = init;
 		#pragma  vector always
 		for (int i = range.begin(); i < range.end(); ++i) {
-			int64_t mask = Q19PRED(d, i, p1, &, |) | Q19PRED(d,i,p2,&,|) | Q19PRED(d,i,p3,&,|);
+			int64_t mask = Q19PRED(d, i, p1, &, |);
 			total.sum += (~(mask-1)) &  (((int64_t)d.eprice[i]) * (100 - d.discount[i]));
 			total.count += mask;
 		}
@@ -80,7 +80,7 @@ q19res q19lite_all_masked_vectorized(const lineitem_parts &d, q19params p1, q19p
 }
 
 
-q19res q19lite_all_masked_scalar(const lineitem_parts &d, q19params p1, q19params p2, q19params p3)
+q19res q19lite_all_masked_scalar(const lineitem_parts &d, q19params p1)
 {
 
 	using namespace tbb;
@@ -90,7 +90,7 @@ q19res q19lite_all_masked_scalar(const lineitem_parts &d, q19params p1, q19param
 		auto total = init;
 		#pragma novector
 		for (int i = range.begin(); i < range.end(); ++i) {
-			int64_t mask = Q19PRED(d, i, p1, &, |) | Q19PRED(d,i,p2,&,|) | Q19PRED(d,i,p3,&,|);
+			int64_t mask = Q19PRED(d, i, p1, &, |);
 			total.sum += (~(mask-1)) &  (((int64_t)d.eprice[i]) * (100 - d.discount[i]));
 			total.count += mask;
 		}
@@ -104,13 +104,13 @@ q19res q19lite_all_masked_scalar(const lineitem_parts &d, q19params p1, q19param
 
 
 
-q19res q19lite_all_branched (const lineitem_parts &d, q19params p1, q19params p2, q19params p3) {
+q19res q19lite_all_branched (const lineitem_parts &d, q19params p1) {
 	using namespace tbb;
 	
 	auto body = 	[&](const auto & range, const auto & init)  {
 		q19res total = init;
 		for (int i = range.begin(); i < range.end(); ++i) {
-			int64_t mask = Q19PRED(d, i, p1, &&, ||) || Q19PRED(d,i,p2,&&,||) || Q19PRED(d,i,p3,&&,||);
+			int64_t mask = Q19PRED(d, i, p1, &&, ||);
 
 			if (mask)
 				{
@@ -124,28 +124,4 @@ q19res q19lite_all_branched (const lineitem_parts &d, q19params p1, q19params p2
 
 	return parallel_reduce(blocked_range<size_t>(0, d.len, FLAGS_grain_size), init, body, addq19);
 
-}
-
-q19res q19lite_vectorized_assume_sorted(const lineitem_parts &d, q19params p1, q19params p2, q19params p3)
-{
-
-	(void)p2; (void)p3;
-	using namespace tbb;
-	auto body = 	[&](const auto & range, const auto & init)  {
-		auto total = init;
-		#pragma  vector always
-		for (int i = range.begin(); i < range.end(); ++i) {
-			
-			int64_t mask = Q19PRED_INNER(d, i, p1, &&, &, &, |);
-
-			if (mask) {
-				total.sum += ((int64_t)d.eprice[i]) * (100 - d.discount[i]);
-				total.count += mask;
-			}
-		}
-
-		return total;
-	};
-
-	return parallel_reduce(blocked_range<size_t>(0, d.len, FLAGS_grain_size), init, body, addq19);
 }
