@@ -15,6 +15,8 @@ DEFINE_int32(array_size_elts, 1<<10, "data size (num elements)");
 DEFINE_int32(array_size_mb, -1, "data size (MB)");
 DEFINE_int32(limit_lower, 64, "lower limit");
 DEFINE_int32(limit_upper, 96, "upper limit");
+DEFINE_int32(num_brands, 300, "selectivity of first predicate is 3/num_brands");
+
 DEFINE_int32(threads, 4, "upper limit");
 DEFINE_bool(sorted, false, "sorted");
 
@@ -75,14 +77,15 @@ lineitem_parts g_q19data;
 
 void init_q19data() {
 	using namespace tbb;
-	vector<int> max_values({40, 15, 20, 10, 90});
+	vector<int> max_values({FLAGS_num_brands, 20, 15, 10, 90});
 	/*brand, container, quantity, eprice, discount */
 	g_q19data = alloc_lineitem_parts(FLAGS_array_size_elts);
 	
 	init_data(g_q19data.brand, FLAGS_array_size_elts, max_values[0]);
-	init_data(g_q19data.container, FLAGS_array_size_elts, max_values[1]);
-	init_data(g_q19data.quantity, FLAGS_array_size_elts, max_values[2]);
-	init_data(g_q19data.eprice, FLAGS_array_size_elts, max_values[2]);
+	init_data(g_q19data.quantity, FLAGS_array_size_elts, max_values[1]);
+	init_data(g_q19data.container, FLAGS_array_size_elts, max_values[2]);
+	
+	init_data(g_q19data.eprice, FLAGS_array_size_elts, max_values[3]);
 	init_data(g_q19data.discount, FLAGS_array_size_elts, max_values[4]);
 
 	if (FLAGS_sorted) {
