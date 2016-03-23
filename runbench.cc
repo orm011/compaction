@@ -54,6 +54,35 @@ template <typename T, typename C> void init_data(T *d, size_t len, C max)
 }
 
 
+template <typename T, typename Pred>
+size_t count_words(T *d, size_t len, Pred pred, size_t elts_per_cache_line)
+{
+	using namespace tbb;
+	assert(0 == ((size_t)d) % cache_line_size);
+	assert(0 == (len % elts_per_cache_line));
+	
+	auto body = [&](const auto &r, const auto &init) -> size_t {
+		size_t word_count = init;
+		
+		for ( size_t i = r.begin(); i < r.end(); i+=elts_per_cache_line ) {
+			unsigned int found = 0;
+			for (size_t j = 0; j < elts_per_cache_line; ++j) {
+				found = found | pred(d[i + j]);
+			}
+
+			word_count += found;
+		}
+
+		return word_count;
+	};
+	
+	return parallel_reduce(blocked_range<size_t>(0, len, 1<<12),
+									0,
+									body,
+									[](const size_t & a, const size_t & b) ->size_t {return a + b;});
+}
+
+
 q19res q19_expected = {-1, -1};
 
 
