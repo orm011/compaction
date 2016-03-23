@@ -197,8 +197,18 @@ BENCHMARK(bm_q19lite_all_masked_vectorized);
 BENCHMARK(bm_q19lite_all_masked_scalar);
 BENCHMARK(bm_q19lite_all_branched);
 
+void intHandler(int ) {
+	cout << "cleaning up  .... " << endl;
+	if (m){
+		m->cleanup();
+	}
+	exit(1);
+}
+
 int main(int argc, char** argv) {
-	
+	signal(SIGINT, intHandler);
+
+
 	gflags::SetUsageMessage("usage");	
 	gflags::ParseCommandLineFlags(&argc, &argv, false);
 
