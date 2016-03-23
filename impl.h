@@ -7,6 +7,8 @@ typedef int32_t data_t;
 typedef DATA_T data_t;
 #endif
 
+static_assert(sizeof(data_t) > 1, "uint8_t cannot have selectivity lower than 1/255");
+
 struct lineitem_parts {
 	size_t len {};
 
