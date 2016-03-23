@@ -4,7 +4,7 @@
 #include <gflags/gflags.h>
 
 using namespace std;
-DEFINE_int32(grain_size, 1 << 12, "minimum amount of work (num array elts)");
+DEFINE_int32(grain_size, (1 << 14)/sizeof(data_t), "minimum amount of work (num array elts)");
 
 void col_to_row(const lineitem_parts & columns, q19row *rows){
 	using namespace tbb;
