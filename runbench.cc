@@ -8,14 +8,19 @@
 #include <string>
 #include <tbb/tbb.h>
 #include <cpucounters.h>
+#include <signal.h>
+#include <types.h>
 
 using namespace std;
+
+static const size_t cache_line_size = 64;
 
 DEFINE_int32(array_size_elts, 1<<10, "data size (num elements)");
 DEFINE_int32(array_size_mb, -1, "data size (MB)");
 DEFINE_int32(limit_lower, 64, "lower limit");
 DEFINE_int32(limit_upper, 96, "upper limit");
-DEFINE_int32(num_brands, 300, "selectivity of first predicate is 3/num_brands");
+DEFINE_int32(num_brands, 100, "selectivity of first predicate is 1/num_brands");
+DEFINE_int32(brand, 1, "brand used");
 
 DEFINE_int32(threads, 4, "upper limit");
 DEFINE_bool(sorted, false, "sorted");
@@ -51,12 +56,6 @@ template <typename T, typename C> void init_data(T *d, size_t len, C max)
 
 q19res q19_expected = {-1, -1};
 
-q19params params1 =  {
-	.brand = 1,
-	.container = {1,2,3,4},
-	.max_quantity = 11,
-	.min_quantity = 1
-};
 
 // q19params params2 = {
 // 	.brand = 2,
@@ -88,6 +87,9 @@ void init_q19data() {
 	init_data(g_q19data.eprice, FLAGS_array_size_elts, max_values[3]);
 	init_data(g_q19data.discount, FLAGS_array_size_elts, max_values[4]);
 
+
+
+	
 	if (FLAGS_sorted) {
 		auto rows = allocate_aligned<q19row>(g_q19data.len);
 		col_to_row(g_q19data, rows.get());
@@ -110,11 +112,26 @@ template <typename Func> void q19_template(benchmark::State & state, Func f) {
 		init_q19data();
 		ASSERT_EQ(q19_expected.sum, -1);
 	}
-	
+
+	q19params params1;
+	params1.brand = FLAGS_brand;
+	params1.container = 1;
+	params1.max_quantity = 11;
+	params1.min_quantity = 1;
+
   if ( q19_expected.count < 0) {
 		tbb::task_scheduler_init init_disable(1); // reference always runs serially
 		q19_expected = q19lite_all_branched(g_q19data, params1);
-		cerr << "selectivity: " << q19_expected.count << "/" << g_q19data.len << " (" << ((double)(q19_expected.count))/g_q19data.len  << ")" << endl;
+
+
+		auto brand_pred = [&](auto elt) { return elt == params1.brand;  };
+		auto elts_per_line = cache_line_size / sizeof(g_q19data.container[0]);
+		cout << "elts per line " << elts_per_line << endl;;
+		auto count = count_words(g_q19data.brand, g_q19data.len, brand_pred, elts_per_line);
+		
+
+		cerr << "selectivity: " << q19_expected.count << "/" << g_q19data.len << " (" << ((double)(q19_expected.count))/g_q19data.len  << "), cache_lines:" << count  << "( "
+				 << ((count*cache_line_size) >> 20) << " MB)" << endl;
 	}
 
 

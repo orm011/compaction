@@ -25,14 +25,14 @@ __declspec (align(64)) data_t discount[] =
 // 1, 1, 0, 0, 1, 0, 0, 0
 q19params test_params1 =  {
 	.brand = 1,
-	.container = {1,1,1,1},
+	.container = 1,
 	.max_quantity = 11,
 	.min_quantity = 0,
 };
 
 q19params test_params2 = {
 	.brand = 2,
-	.container = {4,4,4,4},
+	.container = 4,
 	.max_quantity = 15,
 	.min_quantity = 0,
 };

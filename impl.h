@@ -34,7 +34,7 @@ void row_to_col(const q19row *output, lineitem_parts &l);
 
 struct q19params  {
 	data_t brand;
-	data_t container[4] ;
+	data_t container ;
 	data_t max_quantity ;
 	data_t min_quantity ;
 };

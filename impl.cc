@@ -40,17 +40,14 @@ void row_to_col(const q19row *rows, lineitem_parts &columns){
 
 
 
-#define Q19PRED_INNER($d,$i,$p,$AND1, $AND2, $AND3, $OR)	\
-	((($d).brand[($i)] == ($p).brand) $AND1 \
-	 (($d).quantity[($i)] < ($p).max_quantity) $AND2 \
+#define Q19PRED_INNER($d,$i,$p, $AND1, $AND2, $AND3)	\
+	((($d).brand[($i)] == ($p).brand) $AND1						\
+	 (($d).quantity[($i)] < ($p).max_quantity) $AND2	\
 	 (($d).quantity[($i)] >= ($p).min_quantity) $AND3 \
-	 ( ($d).container[($i)] == ($p).container[0] $OR \
-		 ($d).container[($i)] == ($p).container[1] $OR \
-		 ($d).container[($i)] == ($p).container[2] $OR \
-		 ($d).container[($i)] == ($p).container[3] ))
+	 ($d).container[($i)] == ($p).container )
 
-#define Q19PRED($d,$i,$p,$AND, $OR)				\
-	Q19PRED_INNER($d,$i,$p,$AND, $AND, $AND, $OR)
+#define Q19PRED($d,$i,$p,$AND)									\
+	Q19PRED_INNER($d,$i,$p,$AND, $AND, $AND)
 
 static const q19res  init = {.count = 0, .sum = 0};
 static const auto addq19 = [](const q19res &x, const q19res & y) -> q19res { q19res ans; ans.count = x.count + y.count;  ans.sum = (x.sum + y.sum); return ans; };
@@ -68,7 +65,7 @@ q19res q19lite_all_masked_vectorized(const lineitem_parts &d, q19params p1)
 		auto total = init;
 		#pragma  vector always
 		for (int i = range.begin(); i < range.end(); ++i) {
-			int64_t mask = Q19PRED(d, i, p1, &, |);
+			int64_t mask = Q19PRED(d, i, p1, &);
 			total.sum += (~(mask-1)) &  (((int64_t)d.eprice[i]) * (100 - d.discount[i]));
 			total.count += mask;
 		}
@@ -86,11 +83,10 @@ q19res q19lite_all_masked_scalar(const lineitem_parts &d, q19params p1)
 	using namespace tbb;
 	
 	auto body = 	[&](const auto & range, const auto & init)  {
-	
 		auto total = init;
 		#pragma novector
 		for (int i = range.begin(); i < range.end(); ++i) {
-			int64_t mask = Q19PRED(d, i, p1, &, |);
+			int64_t mask = Q19PRED(d, i, p1, &);
 			total.sum += (~(mask-1)) &  (((int64_t)d.eprice[i]) * (100 - d.discount[i]));
 			total.count += mask;
 		}
@@ -110,7 +106,7 @@ q19res q19lite_all_branched (const lineitem_parts &d, q19params p1) {
 	auto body = 	[&](const auto & range, const auto & init)  {
 		q19res total = init;
 		for (int i = range.begin(); i < range.end(); ++i) {
-			int64_t mask = Q19PRED(d, i, p1, &&, ||);
+			int64_t mask = Q19PRED(d, i, p1, &&);
 
 			if (mask)
 				{
