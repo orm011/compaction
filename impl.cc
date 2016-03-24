@@ -229,14 +229,15 @@ q19res q19lite_gather (const lineitem_parts &d, q19params p1) {
 		}
 
 		for (int idx = vec_tail_end; idx < j; ++idx) {
+			auto i = buf[idx];
 			auto mask =
-			(startquantity[idx] > p1.min_quantity  &&
-			 startquantity[idx] < p1.max_quantity  &&
-			 startcontainer[idx] == p1.container);
+			(startquantity[i] >= p1.min_quantity  &&
+			 startquantity[i] < p1.max_quantity  &&
+			 startcontainer[i] == p1.container);
 
 			if (mask) {
 				total.count++;
-				total.sum += starteprice[idx]*(100 - startdiscount[idx]);
+				total.sum += starteprice[i]*(100 - startdiscount[i]);
 			}
 		}
 		
