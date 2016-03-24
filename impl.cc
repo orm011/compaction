@@ -115,6 +115,7 @@ q19res q19lite_all_branched (const lineitem_parts &d, q19params p1) {
 	
 	auto body = 	[&](const auto & range, const auto & init)  {
 		q19res total = init;
+		#pragma novector
 		for (int i = range.begin(); i < range.end(); ++i) {
 			int64_t mask = Q19PRED(d, i, p1, &&);
 
