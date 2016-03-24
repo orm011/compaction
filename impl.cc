@@ -198,7 +198,7 @@ q19res q19lite_gather (const lineitem_parts &d, q19params p1) {
 			}
 		}
 
-		auto vec_tail_end = (j / k_elts_per_vec) * k_elts_per_vec ;
+		const auto vec_tail_end = (j / k_elts_per_vec) * k_elts_per_vec ;
 		
 		for (int idx = 0; idx < vec_tail_end; idx += k_elts_per_vec ) {
 			auto vindex = _mm256_load_si256((__m256i *)&buf[idx]);
