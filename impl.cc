@@ -154,8 +154,7 @@ q19res q19lite_gather (const lineitem_parts &d, q19params p1) {
 		
 		__declspec(align(64)) uint32_t buf[k_buf_size] {};
 		
-
-		auto process_buffer = [&](size_t buf_size){
+		auto process_buffer = [&](auto buf_size){
 			for (int idx = 0; idx < buf_size; idx += k_elts_per_vec ) {
 						auto vindex = _mm256_load_si256((__m256i *)&buf[idx]);
 						
@@ -184,7 +183,6 @@ q19res q19lite_gather (const lineitem_parts &d, q19params p1) {
 					}
 		};
 
-		
 		int j = 0;
 		for (uint32_t i = 0; i < (range.end() - range.begin()); ++i) {
 			buf[j] = i;
@@ -197,34 +195,7 @@ q19res q19lite_gather (const lineitem_parts &d, q19params p1) {
 		}
 		
 		const auto vec_tail_end = (j / k_elts_per_vec) * k_elts_per_vec ;
-		//		process_buffer(vec_tail_end);
-		for (int idx = 0; idx < vec_tail_end; idx += k_elts_per_vec ) {
-			auto vindex = _mm256_load_si256((__m256i *)&buf[idx]);
-			
-			auto containerv =
-			_mm256_i32gather_epi32(startcontainer, vindex, sizeof(data_t));
-			auto quantityv =
-			_mm256_i32gather_epi32(startquantity, vindex, sizeof(data_t));
-			auto epricev =
-			_mm256_i32gather_epi32(starteprice, vindex, sizeof(data_t));
-			auto discountv =
-			_mm256_i32gather_epi32(startdiscount, vindex, sizeof(data_t));
-			
-			auto containqual = _mm256_cmpeq_epi32 (containerv, container_expected);
-			auto geqlow = _mm256_cmpgt_epi32 (quantityv, qty_low);
-			auto lthigh = _mm256_cmpgt_epi32 (qty_max, quantityv);
-			auto quals1 = _mm256_and_si256 (containqual, geqlow);
-			auto mask = _mm256_and_si256 (quals1, lthigh);
-			
-			auto counts = _mm256_srli_epi32 (mask, 31);
-			acc_counts = _mm256_add_epi32(counts, acc_counts);
-
-			
-			auto minus = _mm256_sub_epi32(hundred_, discountv);
-			auto prod = _mm256_mullo_epi32 (epricev, minus);
-			auto prod_and = _mm256_and_si256(prod, mask);
-			acc_total = _mm256_add_epi32(acc_total, prod_and);						
-		}
+		process_buffer(vec_tail_end);
 
 		for (int idx = vec_tail_end; idx < j; ++idx) {
 			auto i = buf[idx];
