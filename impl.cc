@@ -8,7 +8,7 @@ DEFINE_int32(grain_size, (1 << 14)/sizeof(data_t), "minimum amount of work (num 
 
 typedef __m256i vec_t;
 
-const static size_t k_buf_size = 32;
+const static size_t k_buf_size = 2048;
 const static size_t k_vec_size = sizeof(vec_t);
 static_assert(k_buf_size % k_vec_size == 0, "vector must divide buffer");
 static_assert(k_vec_size % sizeof(data_t) == 0, "data_t must divide vector");
