@@ -193,9 +193,14 @@ void bm_q19lite_all_branched(benchmark::State & state) {
 }
 
 
+void bm_q19lite_gather(benchmark::State & state) {
+	q19_template(state, q19lite_gather);
+}
+
 BENCHMARK(bm_q19lite_all_masked_vectorized);
 BENCHMARK(bm_q19lite_all_masked_scalar);
 BENCHMARK(bm_q19lite_all_branched);
+BENCHMARK(bm_q19lite_gather);
 
 void intHandler(int ) {
 	cout << "cleaning up  .... " << endl;

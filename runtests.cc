@@ -7,19 +7,27 @@
 using namespace std;
 
 __declspec (align(64)) data_t brand[] =
-{ 1, 2, 3, 4, 2, 3, 2, 1};
+	{ 1, 2, 3, 4, 2, 3, 2, 1};
 
 __declspec (align(64)) data_t container[] =
-{ 1, 4, 3, 4, 4, 3, 2, 1};
+	{ 1, 4, 3, 4, 4, 3, 2, 1};
 
 __declspec (align(64)) data_t quantity[] =
-{ 9,10,11,12,13,14,15,16};
+	{ 9,10,11,12,13,14,15,16};
 
 __declspec (align(64)) data_t eprice[] =
-{ 1, 1, 1, 1, 1, 1, 1, 1};
+	{ 1, 1, 1, 1, 1, 1, 1, 1};
 
 __declspec (align(64)) data_t discount[] =
-{98,98,98,98,98,98,98};
+	{98,98,98,98,98,98,98,98};
+
+__declspec (align(64)) data_t brand_easy[] =
+	{1, 1, 1, 1, 1, 1, 1, 1};
+__declspec (align(64)) data_t container_easy[] =
+	{1, 1, 1, 1, 1, 1, 1, 1};
+__declspec (align(64)) data_t quantity_easy[] =
+	{1, 1, 1, 1, 1, 1, 1, 1};
+
 
 // should qualify:
 // 1, 1, 0, 0, 1, 0, 0, 0
@@ -75,6 +83,21 @@ template <typename F> void testq19(F f){
 	ASSERT_EQ(2, result.sum);
 }
 
+template <typename F> void testq19_easy(F f){
+	lineitem_parts d;
+	d.len = 8;
+	d.eprice = eprice;
+	d.discount = discount;
+
+	d.quantity = quantity_easy;
+	d.container = container_easy;
+	d.brand = brand_easy;
+		
+	auto result = f(d, test_params1);
+	ASSERT_EQ(8, result.count);
+	ASSERT_EQ(16, result.sum);
+}
+
 
 TEST(q19lite, all_masked_scalar) {
 	testq19(q19lite_all_masked_scalar);
@@ -87,6 +110,15 @@ TEST(q19lite, all_masked_vectorized) {
 TEST(q19lite, all_branched) {
 	testq19(q19lite_all_branched);
 }
+
+TEST(q19lite, gather) {
+	testq19(q19lite_gather);
+}
+
+TEST(q19lite, gather_easy) {
+	testq19_easy(q19lite_gather);
+}
+
 
 int main(int argc, char **argv) {
   ::testing::InitGoogleTest(&argc, argv);

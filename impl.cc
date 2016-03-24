@@ -6,6 +6,16 @@
 using namespace std;
 DEFINE_int32(grain_size, (1 << 14)/sizeof(data_t), "minimum amount of work (num array elts)");
 
+typedef __m256i vec_t;
+
+const static size_t k_buf_size = 32;
+const static size_t k_vec_size = sizeof(vec_t);
+static_assert(k_buf_size % k_vec_size == 0, "vector must divide buffer");
+static_assert(k_vec_size % sizeof(data_t) == 0, "data_t must divide vector");
+
+const static size_t k_elts_per_vec = k_vec_size/sizeof(data_t);
+const static size_t k_elts_per_buf = k_buf_size/sizeof(data_t);
+
 void col_to_row(const lineitem_parts & columns, q19row *rows){
 	using namespace tbb;
 	auto body = [&](const auto & r){
@@ -115,6 +125,123 @@ q19res q19lite_all_branched (const lineitem_parts &d, q19params p1) {
 				}
 		}
 
+		return  total;
+	};
+
+	return parallel_reduce(blocked_range<size_t>(0, d.len, FLAGS_grain_size), init, body, addq19);
+
+}
+
+
+
+q19res q19lite_gather (const lineitem_parts &d, q19params p1) {
+	using namespace tbb;
+	
+	const auto container_expected = _mm256_set1_epi32(p1.container);
+	const auto qty_low = _mm256_set1_epi32(p1.min_quantity - 1); //  bc GThan
+	const auto qty_max = _mm256_set1_epi32(p1.max_quantity);
+
+	
+	
+	auto body = 	[&](const auto & range, const auto & init)  {
+		auto startbrand = &d.brand[range.begin()];
+		auto startcontainer = &d.container[range.begin()];
+		auto startquantity  = &d.quantity[range.begin()];
+		auto starteprice  = &d.eprice[range.begin()];
+		auto startdiscount  = &d.discount[range.begin()];
+		
+		auto acc_total = _mm256_set1_epi32(0);
+		auto acc_counts = _mm256_set1_epi32(0);
+		auto hundred_ = _mm256_set1_epi32(100);
+		q19res total = init;
+		
+		__declspec(align(64)) uint32_t buf[k_buf_size] {};
+		
+		
+		int j = 0;
+		for (uint32_t i = 0; i < (range.end() - range.begin()); ++i) {
+			if ( startbrand[i] == p1.brand ) {
+				buf[j] = i;
+				++j;
+				
+				if (j == k_elts_per_buf) {
+					for (int idx = 0; idx < k_elts_per_buf; idx += k_elts_per_vec ) {
+						auto vindex = _mm256_load_si256((__m256i *)&buf[idx]);
+
+						auto containerv =
+							_mm256_i32gather_epi32(startcontainer, vindex, sizeof(data_t));
+						auto quantityv =
+							_mm256_i32gather_epi32(startquantity, vindex, sizeof(data_t));
+						auto epricev =
+							_mm256_i32gather_epi32(starteprice, vindex, sizeof(data_t));
+						auto discountv =
+							_mm256_i32gather_epi32(startdiscount, vindex, sizeof(data_t));
+
+						auto containqual = _mm256_cmpeq_epi32 (containerv, container_expected);
+						auto geqlow = _mm256_cmpgt_epi32 (quantityv, qty_low);
+						auto lthigh = _mm256_cmpgt_epi32 (qty_max, quantityv);
+						auto quals1 = _mm256_and_si256 (containqual, geqlow);
+						auto mask = _mm256_and_si256 (quals1, lthigh);
+
+						auto counts = _mm256_srli_epi32 (mask, 31);
+						acc_counts = _mm256_add_epi32(counts, acc_counts);
+
+						auto minus = _mm256_sub_epi32(hundred_, discountv);
+						auto prod = _mm256_mullo_epi32 (epricev, minus);
+						auto prod_and = _mm256_and_si256(prod, mask);
+						acc_total = _mm256_add_epi32(acc_total, prod_and);						
+					}
+
+					j = 0;
+				}
+			}
+		}
+
+		auto vec_tail_end = (j / k_elts_per_vec) * k_elts_per_vec ;
+		
+		for (int idx = 0; idx < vec_tail_end; idx += k_elts_per_vec ) {
+			auto vindex = _mm256_load_si256((__m256i *)&buf[idx]);
+			
+			auto containerv =
+			_mm256_i32gather_epi32(startcontainer, vindex, sizeof(data_t));
+			auto quantityv =
+			_mm256_i32gather_epi32(startquantity, vindex, sizeof(data_t));
+			auto epricev =
+			_mm256_i32gather_epi32(starteprice, vindex, sizeof(data_t));
+			auto discountv =
+			_mm256_i32gather_epi32(startdiscount, vindex, sizeof(data_t));
+			
+			auto containqual = _mm256_cmpeq_epi32 (containerv, container_expected);
+			auto geqlow = _mm256_cmpgt_epi32 (quantityv, qty_low);
+			auto lthigh = _mm256_cmpgt_epi32 (qty_max, quantityv);
+			auto quals1 = _mm256_and_si256 (containqual, geqlow);
+			auto mask = _mm256_and_si256 (quals1, lthigh);
+			
+			auto counts = _mm256_srli_epi32 (mask, 31);
+			acc_counts = _mm256_add_epi32(counts, acc_counts);
+
+			
+			auto minus = _mm256_sub_epi32(hundred_, discountv);
+			auto prod = _mm256_mullo_epi32 (epricev, minus);
+			auto prod_and = _mm256_and_si256(prod, mask);
+			acc_total = _mm256_add_epi32(acc_total, prod_and);						
+		}
+
+		for (int idx = vec_tail_end; idx < j; ++idx) {
+			auto mask =
+			(startquantity[idx] > p1.min_quantity  &&
+			 startquantity[idx] < p1.max_quantity  &&
+			 startcontainer[idx] == p1.container);
+
+			if (mask) {
+				total.count++;
+				total.sum += starteprice[idx]*(100 - startdiscount[idx]);
+			}
+		}
+		
+		
+		total.count += sum_lanes_8(acc_counts);
+		total.sum += sum_lanes_8(acc_total);
 		return  total;
 	};
 
