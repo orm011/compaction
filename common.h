@@ -28,12 +28,17 @@
 static const size_t k_vecsize = 8;
 
 //32 byte alignment for avx2. 64 in case of avxknc
+//also makes false sharing harder, bc line is all for this.
 static const size_t k_align = 64;
 
 template <typename T> auto allocate_aligned(int size){
+
+	auto tmp1 = size*sizeof(T);
+	auto sz = tmp1 + k_align - (tmp1 % k_align);
+	auto ptr = (T*)_mm_malloc(sz, k_align);
   auto del = [](auto *p){ _mm_free(p); };
-  return std::unique_ptr<T, decltype(del)>((T*)_mm_malloc(size*sizeof(T), k_align),
-		       del);
+
+  return std::unique_ptr<T, decltype(del)>(ptr, del);
 }
 
 template <typename T> using aligned_ptr =  decltype(allocate_aligned<T>(0));
