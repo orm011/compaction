@@ -20,7 +20,7 @@ DEFINE_int32(array_size_mb, -1, "data size (MB)");
 DEFINE_int32(limit_lower, 64, "lower limit");
 DEFINE_int32(limit_upper, 96, "upper limit");
 DEFINE_int32(num_brands, 100, "selectivity of first predicate is 1/num_brands");
-DEFINE_int32(brand, 1, "brand used");
+DEFINE_int32(brand, 0, "brand used");
 
 DEFINE_int32(threads, 4, "upper limit");
 DEFINE_bool(sorted, false, "sorted");
@@ -106,7 +106,7 @@ lineitem_parts g_q19data;
 
 void init_q19data() {
 	using namespace tbb;
-	vector<int> max_values({FLAGS_num_brands, 20, 15, 10, 90});
+	vector<int> max_values({FLAGS_num_brands, 1, 10, 10, 90});
 	/*brand, container, quantity, eprice, discount */
 	g_q19data = alloc_lineitem_parts(FLAGS_array_size_elts);
 	
@@ -145,9 +145,9 @@ template <typename Func> void q19_template(benchmark::State & state, Func f) {
 
 	q19params params1;
 	params1.brand = FLAGS_brand;
-	params1.container = 1;
-	params1.max_quantity = 11;
-	params1.min_quantity = 1;
+	params1.container = 0;
+	params1.max_quantity = 10;
+	params1.min_quantity = 0;
 
   if ( q19_expected.count < 0) {
 		tbb::task_scheduler_init init_disable(1); // reference always runs serially

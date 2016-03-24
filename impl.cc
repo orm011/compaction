@@ -153,22 +153,16 @@ q19res q19lite_gather (const lineitem_parts &d, q19params p1) {
 		
 		auto acc_total = _mm256_set1_epi32(0);
 		auto acc_counts = _mm256_set1_epi32(0);
-		auto hundred_ = _mm256_set1_epi32(100);
+		const auto hundred_ = _mm256_set1_epi32(100);
 		q19res total = init;
 		
 		__declspec(align(64)) uint32_t buf[k_buf_size] {};
 		
-		
-		int j = 0;
-		for (uint32_t i = 0; i < (range.end() - range.begin()); ++i) {
-			if ( startbrand[i] == p1.brand ) {
-				buf[j] = i;
-				++j;
-				
-				if (j == k_elts_per_buf) {
-					for (int idx = 0; idx < k_elts_per_buf; idx += k_elts_per_vec ) {
-						auto vindex = _mm256_load_si256((__m256i *)&buf[idx]);
 
+		auto process_buffer = [&](size_t buf_size){
+			for (int idx = 0; idx < buf_size; idx += k_elts_per_vec ) {
+						auto vindex = _mm256_load_si256((__m256i *)&buf[idx]);
+						
 						auto containerv =
 							_mm256_i32gather_epi32(startcontainer, vindex, sizeof(data_t));
 						auto quantityv =
@@ -192,14 +186,22 @@ q19res q19lite_gather (const lineitem_parts &d, q19params p1) {
 						auto prod_and = _mm256_and_si256(prod, mask);
 						acc_total = _mm256_add_epi32(acc_total, prod_and);						
 					}
+		};
 
-					j = 0;
-				}
+		
+		int j = 0;
+		for (uint32_t i = 0; i < (range.end() - range.begin()); ++i) {
+			buf[j] = i;
+			j += (startbrand[i] == p1.brand);
+
+			if (j == k_elts_per_buf) {
+				process_buffer(k_elts_per_buf);
+				j = 0;
 			}
 		}
-
-		const auto vec_tail_end = (j / k_elts_per_vec) * k_elts_per_vec ;
 		
+		const auto vec_tail_end = (j / k_elts_per_vec) * k_elts_per_vec ;
+		//		process_buffer(vec_tail_end);
 		for (int idx = 0; idx < vec_tail_end; idx += k_elts_per_vec ) {
 			auto vindex = _mm256_load_si256((__m256i *)&buf[idx]);
 			
