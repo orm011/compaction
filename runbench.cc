@@ -31,6 +31,7 @@ DEFINE_int32(v, 1, "verbosity");
 DEFINE_double(benchmark_min_time, 1, "min time seconds");
 DEFINE_string(benchmark_format,"tabular", "<tabular|json|csv>)");
 DEFINE_bool(benchmark_list_tests, false, "{true|false}");
+DEFINE_bool(use_pmu_counter, false, "{true|false}");
 
 const int k_max = 128;
 const int middle = k_max >> 1;
@@ -165,16 +166,22 @@ template <typename Func> void q19_template(benchmark::State & state, Func f) {
 
 
 	q19res res = {0,0};
-	SocketCounterState before = m->getSocketCounterState(0);
+	SocketCounterState before, after;
+
+	if (FLAGS_use_pmu_counter) {
+		before = m->getSocketCounterState(0);
+	}
   while (state.KeepRunning()) {
     res = f(g_q19data, params1);
   }
-	SocketCounterState after = m->getSocketCounterState(0);
+	if (FLAGS_use_pmu_counter) {
+			after = m->getSocketCounterState(0);
+			uint64 read =  getBytesReadFromMC (before, after);
+			uint64 write =  getBytesWrittenToMC (before, after);
+			cout  << "MBs read from MC: " << (read >> 20) << endl;
+			cout  << "MBs written to MC: " << (write >> 20) << endl;
+	}
 	
-	uint64 read =  getBytesReadFromMC (before, after);
-	uint64 write =  getBytesWrittenToMC (before, after);
-	cout  << "MBs read from MC: " << (read >> 20) << endl;
-	cout  << "MBs written to MC: " << (write >> 20) << endl;
 	
 	ASSERT_EQ(q19_expected.count, res.count);
 	ASSERT_EQ(q19_expected.sum, res.sum);
@@ -226,6 +233,7 @@ int main(int argc, char** argv) {
 	tbb::task_scheduler_init init(FLAGS_threads);
 
 
+	if (FLAGS_use_pmu_counter) {
 	m = PCM::getInstance();	
 	PCM::ErrorCode status = m->program();
 	// program counters, and on a failure just exit
@@ -251,8 +259,11 @@ int main(int argc, char** argv) {
 			cerr << "Access to Intel(r) Performance Counter Monitor has denied (Unknown error)." << endl;
 			exit(EXIT_FAILURE);
 		}
+	}
 	
   ::benchmark::RunSpecifiedBenchmarks();
 
-	m->cleanup();
+	if (FLAGS_use_pmu_counter){
+		m->cleanup();
+	}
 }
