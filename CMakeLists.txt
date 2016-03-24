@@ -7,6 +7,7 @@ LINK_DIRECTORIES(/home/orm/IntelPerformanceCounterMonitor-PCM-V2.10/intelpcm.so)
 
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Werror -march=native -mtune=native -Wunused-parameter -Wno-char-subscripts -std=c++14 -O3 -g")
 
+SET(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0 -debug")
 
 if (DEFINED ENV{DATA_T})
 	message("setting DATA_T to "  $ENV{DATA_T} "...")
