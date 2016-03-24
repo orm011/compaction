@@ -20,7 +20,6 @@ DEFINE_int32(array_size_mb, -1, "data size (MB)");
 DEFINE_int32(limit_lower, 64, "lower limit");
 DEFINE_int32(limit_upper, 96, "upper limit");
 DEFINE_int32(num_brands, 100, "selectivity of first predicate is 1/num_brands");
-DEFINE_int32(brand, 0, "brand used");
 
 DEFINE_int32(threads, 4, "upper limit");
 DEFINE_bool(sorted, false, "sorted");
@@ -144,7 +143,7 @@ template <typename Func> void q19_template(benchmark::State & state, Func f) {
 	}
 
 	q19params params1;
-	params1.brand = FLAGS_brand;
+	params1.brand = 0;
 	params1.container = 0;
 	params1.max_quantity = 10;
 	params1.min_quantity = 0;
