@@ -217,5 +217,13 @@ q19res q19lite_gather (const lineitem_parts &d, q19params p1) {
 	};
 
 	return parallel_reduce(blocked_range<size_t>(0, d.len, FLAGS_grain_size), init, body, addq19);
+}
 
+void viz_example(const lineitem_parts &, int * ) {
+	// container, brand are categorical
+	// quantity, eprice.
+	// select avg(quantity), avg(eprice) from table group by container;
+	// select avg(quantity), avg(eprice) from table (where rowid is selected) group by container;
+	// select avg(quantity), avg(eprice) from table group by brand;
+	// select avg(quantity), avg(eprice) from table (where rowid is selected) group by brand;
 }
