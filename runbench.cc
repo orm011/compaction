@@ -10,6 +10,10 @@
 #include <cpucounters.h>
 #include <signal.h>
 #include <types.h>
+#include <stdlib.h>
+#include <limits>		
+#include <random>
+#include <functional>
 
 using namespace std;
 
@@ -31,6 +35,7 @@ DEFINE_double(benchmark_min_time, 1, "min time seconds");
 DEFINE_string(benchmark_format,"tabular", "<tabular|json|csv>)");
 DEFINE_bool(benchmark_list_tests, false, "{true|false}");
 DEFINE_bool(use_pmu_counter, false, "{true|false}");
+DEFINE_bool(verify_uniform, false, "{true|false}");
 
 const int k_max = 128;
 const int middle = k_max >> 1;
@@ -38,19 +43,45 @@ const int quarter = middle >> 1;
 const int threeq = middle + quarter;
 PCM * m = nullptr;
 
-template <typename T, typename C> void init_data(T *d, size_t len, C max)
+template <typename T> void init_data(T *d, size_t len, int32_t max)
 {
 
 	using namespace tbb;
-	
+	if (max > std::numeric_limits<T>::max()){
+		throw std::runtime_error("max is too large");
+	}
+
+	if (max < 0) {
+		throw std::runtime_error("max should be non-negative");
+	}
+
 	auto body = [&](const auto &r) {
-		unsigned int seed = r.begin(); // make the seed unique by range.
+		// random_device rd;
+		// minstd_rand  gen(rd());
+		// gen.seed(r.begin());
+		// uniform_int_distribution<> dis(0, max);
+		uint32_t seed = r.begin();
+		
 		for (int i = r.begin(); i < r.end(); ++i) {
-			d[i] = rand_r(&seed) % max;
+			d[i] = (T)(rand_r(&seed) % (max+1));
 		}
 	};
 	
 	parallel_for(blocked_range<size_t>(0, len, 1<<12), body);
+
+	if (FLAGS_verify_uniform){
+		auto check_body = [&](const auto &r, auto init) -> size_t {
+			for (int i = r.begin(); i < r.end(); ++i) {
+				init += (d[i] == 0);
+			}
+
+			return init;
+		};
+		
+		size_t total = parallel_reduce(blocked_range<size_t>(0, len, 1<<12), 0, check_body, [](const auto &a, const auto &b) { return a + b; });
+
+		cout << "count / len = " <<  total << "/" << len << " = " << ((double)total/len) * 100 << "% vs. " << ((double)1/(max+1)) << endl;
+	}
 }
 
 
@@ -105,20 +136,21 @@ lineitem_parts g_q19data;
 
 void init_q19data() {
 	using namespace tbb;
-	vector<int> max_values({FLAGS_num_brands, 1, 10, 10, 90});
+	if (FLAGS_num_brands <= 0) {
+		throw std::runtime_error("need at least one brand");
+	}
+	
+	vector<int> max_values({FLAGS_num_brands - 1, 0, 7, 7, 127});
 	/*brand, container, quantity, eprice, discount */
 	g_q19data = alloc_lineitem_parts(FLAGS_array_size_elts);
 	
 	init_data(g_q19data.brand, FLAGS_array_size_elts, max_values[0]);
-	init_data(g_q19data.quantity, FLAGS_array_size_elts, max_values[1]);
-	init_data(g_q19data.container, FLAGS_array_size_elts, max_values[2]);
+	init_data(g_q19data.container, FLAGS_array_size_elts, max_values[1]);
+	init_data(g_q19data.quantity, FLAGS_array_size_elts, max_values[2]);
 	
 	init_data(g_q19data.eprice, FLAGS_array_size_elts, max_values[3]);
 	init_data(g_q19data.discount, FLAGS_array_size_elts, max_values[4]);
 
-
-
-	
 	if (FLAGS_sorted) {
 		auto rows = allocate_aligned<q19row>(g_q19data.len);
 		col_to_row(g_q19data, rows.get());
@@ -145,7 +177,7 @@ template <typename Func> void q19_template(benchmark::State & state, Func f) {
 	q19params params1;
 	params1.brand = 0;
 	params1.container = 0;
-	params1.max_quantity = 10;
+	params1.max_quantity = 8;
 	params1.min_quantity = 0;
 
   if ( q19_expected.count < 0) {
@@ -155,12 +187,13 @@ template <typename Func> void q19_template(benchmark::State & state, Func f) {
 
 		auto brand_pred = [&](auto elt) { return elt == params1.brand;  };
 		auto elts_per_line = cache_line_size / sizeof(g_q19data.container[0]);
-		cout << "elts per line " << elts_per_line << endl;;
 		auto count = count_words(g_q19data.brand, g_q19data.len, brand_pred, elts_per_line);
 		
 
-		cerr << "selectivity: " << q19_expected.count << "/" << g_q19data.len << " (" << ((double)(q19_expected.count))/g_q19data.len  << "), cache_lines:" << count  << "( "
-				 << ((count*cache_line_size) >> 20) << " MB)" << endl;
+		cerr << "item level selectivity: " << q19_expected.count << "/" << g_q19data.len << " ( actual: " << (((double)(q19_expected.count))/g_q19data.len)*100  << "% vs. wanted "
+				 << (((double)1)/FLAGS_num_brands) * 100 << "% ) "  << endl;
+		cout << "elts per line " << elts_per_line << endl;;
+		cerr << "cache line level selectivity: "  << count << "/" <<  g_q19data.len / elts_per_line  << " ( " << (((double) count) / ( g_q19data.len / elts_per_line)) * 100 << "%, " << ((count*cache_line_size) >> 20) << " MB)" << endl;
 	}
 
 
