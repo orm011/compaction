@@ -49,10 +49,11 @@ void row_to_col(const q19row *rows, lineitem_parts &columns){
 
 
 #define Q19PRED_INNER($d,$i,$p, $AND1, $AND2, $AND3)	\
-	((($d).brand[($i)] == ($p).brand) $AND1						\
-	 (($d).quantity[($i)] < ($p).max_quantity) $AND2	\
-	 (($d).quantity[($i)] >= ($p).min_quantity) $AND3 \
-	 ($d).container[($i)] == ($p).container )
+	((($d).brand[($i)] == ($p).brand) $AND1 \
+   (($d).container[($i)] == ($p).container) $AND2			\
+	 (($d).quantity[($i)] < ($p).max_quantity) $AND3	\
+	 (($d).quantity[($i)] >= ($p).min_quantity)) 
+
 
 #define Q19PRED($d,$i,$p,$AND)									\
 	Q19PRED_INNER($d,$i,$p,$AND, $AND, $AND)
@@ -131,11 +132,9 @@ q19res q19lite_all_branched (const lineitem_parts &d, q19params p1) {
 
 }
 
-
-
 q19res q19lite_gather (const lineitem_parts &d, q19params p1) {
 	using namespace tbb;
-	
+	abort();
 	const auto container_expected = _mm256_set1_epi32(p1.container);
 	const auto qty_low = _mm256_set1_epi32(p1.min_quantity - 1); //  bc GThan
 	const auto qty_max = _mm256_set1_epi32(p1.max_quantity);
