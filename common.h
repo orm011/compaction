@@ -43,20 +43,19 @@ template <typename T> auto allocate_aligned(int size){
 
 template <typename T> using aligned_ptr =  decltype(allocate_aligned<T>(0));
 
-inline int MarsagliaXOR(int *p_seed) {
-    int seed = *p_seed;
+inline uint32_t MarsagliaXOR(uint32_t *p_seed) {
+    auto seed = *p_seed;
 
     if (seed == 0) {
         seed = 1;
     }
 
-    seed ^= seed << 6;
-    seed ^= ((unsigned)seed) >> 21;
-    seed ^= seed << 7;
+    seed ^= seed >> 5;
+    seed ^= seed << 21;
+    seed ^= seed >> 7;
 
     *p_seed = seed;
-
-    return seed & 0x7FFFFFFF;
+    return seed;
 }
 
 template <typename T> T* allocate(size_t len, size_t byte_alignment = 64) {
