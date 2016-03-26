@@ -2,6 +2,9 @@
 #include "impl.h"
 #include <tbb/tbb.h>
 #include <gflags/gflags.h>
+#include <vectorclass/vectorclass.h>
+
+static_assert(VECTORI256_H == 2, "use int 256 bit vectors");
 
 using namespace std;
 DEFINE_int32(grain_size, (1 << 14)/sizeof(data_t), "minimum amount of work (num array elts)");
@@ -139,6 +142,7 @@ q19res q19lite_gather (const lineitem_parts &d, q19params p1) {
 	const auto qty_max = _mm256_set1_epi32(p1.max_quantity);
 	
 	auto body = 	[&](const auto & range, const auto & init)  {
+		auto len = range.end() - range.begin();
 		auto startbrand = &d.brand[range.begin()];
 		auto startcontainer = &d.container[range.begin()];
 		auto startquantity  = &d.quantity[range.begin()];
@@ -149,43 +153,38 @@ q19res q19lite_gather (const lineitem_parts &d, q19params p1) {
 		auto acc_counts = _mm256_set1_epi32(0);
 		const auto hundred_ = _mm256_set1_epi32(100);
 		q19res total = init;
+
 		
 		__declspec(align(64)) uint32_t buf[k_buf_size] {};
 		
-		auto process_buffer = [&](auto buf_size){
+		auto process_buffer = [&] (auto buf_size) {
+			Vec8i vals;
 			for (int idx = 0; idx < buf_size; idx += k_elts_per_vec ) {
-						auto vindex = _mm256_load_si256((__m256i *)&buf[idx]);
-						
-						auto containerv =
-							_mm256_i32gather_epi32(startcontainer, vindex, sizeof(data_t));
-						auto quantityv =
-							_mm256_i32gather_epi32(startquantity, vindex, sizeof(data_t));
-						auto epricev =
-							_mm256_i32gather_epi32(starteprice, vindex, sizeof(data_t));
-						auto discountv =
-							_mm256_i32gather_epi32(startdiscount, vindex, sizeof(data_t));
+				vals.load_a(&buf[idx]);
+				// complementdary indices for words
+				auto containerv = lookup<32>(vals, startcontainer);
+				auto quantityv = lookup<32>(vals, startquantity);
+				auto epricev = lookup<32>(vals, starteprice);
+				auto discountv = lookup<32>(vals, startdiscount);
 
-						auto containqual = _mm256_cmpeq_epi32 (containerv, container_expected);
-						auto geqlow = _mm256_cmpgt_epi32 (quantityv, qty_low);
-						auto lthigh = _mm256_cmpgt_epi32 (qty_max, quantityv);
-						auto quals1 = _mm256_and_si256 (containqual, geqlow);
-						auto mask = _mm256_and_si256 (quals1, lthigh);
+				auto mask = (containerv == container_expected) & (quantityv > qty_low)
+					& (quantityv < qty_max);
+				
+				auto counts = _mm256_srli_epi32 (mask, 31);
+				acc_counts = _mm256_add_epi32(counts, acc_counts);
 
-						auto counts = _mm256_srli_epi32 (mask, 31);
-						acc_counts = _mm256_add_epi32(counts, acc_counts);
-
-						auto minus = _mm256_sub_epi32(hundred_, discountv);
-						auto prod = _mm256_mullo_epi32 (epricev, minus);
-						auto prod_and = _mm256_and_si256(prod, mask);
-						acc_total = _mm256_add_epi32(acc_total, prod_and);						
-					}
+				auto minus = _mm256_sub_epi32(hundred_, discountv);
+				auto prod = _mm256_mullo_epi32 (epricev, minus);
+				auto prod_and = _mm256_and_si256(prod, mask);
+				acc_total = _mm256_add_epi32(acc_total, prod_and);						
+			}
 		};
 
 		int j = 0;
 		for (uint32_t i = 0; i < (range.end() - range.begin()); ++i) {
 			buf[j] = i;
 			j += (startbrand[i] == p1.brand);
-
+			
 			if (j == k_elts_per_buf) {
 				process_buffer(k_elts_per_buf);
 				j = 0;
