@@ -122,12 +122,9 @@ q19res q19lite_all_branched (const lineitem_parts &d, q19params p1) {
 
 }
 
+
 q19res q19lite_gather (const lineitem_parts &d, q19params p1) {
 	using namespace tbb;
-	const auto container_expected = _mm256_set1_epi32(p1.container);
-	const auto qty_low = _mm256_set1_epi32(p1.min_quantity - 1); //  bc GThan
-	const auto qty_max = _mm256_set1_epi32(p1.max_quantity);
-	
 	auto body = 	[&](const auto & range, const auto & init)  {
 		auto len = range.end() - range.begin();
 		auto startbrand = &d.brand[range.begin()];
@@ -135,35 +132,27 @@ q19res q19lite_gather (const lineitem_parts &d, q19params p1) {
 		auto startquantity  = &d.quantity[range.begin()];
 		auto starteprice  = &d.eprice[range.begin()];
 		auto startdiscount  = &d.discount[range.begin()];
-		
-		auto acc_total = _mm256_set1_epi32(0);
-		auto acc_counts = _mm256_set1_epi32(0);
-		const auto hundred_ = _mm256_set1_epi32(100);
+
+		vec_t acc_counts(0);
+		vec_t acc_total(0);
 		q19res total = init;
 
-		
 		__declspec(align(64)) uint32_t buf[k_buf_size] {};
 		
 		auto process_buffer = [&] (auto buf_size) {
-			Vec8i vals;
 			for (int idx = 0; idx < buf_size; idx += k_elts_per_vec ) {
-				vals.load_a(&buf[idx]);
-				// complementdary indices for words
-				auto containerv = lookup<32>(vals, startcontainer);
-				auto quantityv = lookup<32>(vals, startquantity);
-				auto epricev = lookup<32>(vals, starteprice);
-				auto discountv = lookup<32>(vals, startdiscount);
+				auto indices =  &buf[idx];
 
-				auto mask = (containerv == container_expected) & (quantityv > qty_low)
-					& (quantityv < qty_max);
-				
-				auto counts = _mm256_srli_epi32 (mask, 31);
-				acc_counts = _mm256_add_epi32(counts, acc_counts);
+				auto containerv = gather(indices, startcontainer);
+				auto quantityv = gather(indices, startquantity);
+				auto epricev = gather(indices, starteprice);
+				auto discountv = gather(indices, startdiscount);
 
-				auto minus = _mm256_sub_epi32(hundred_, discountv);
-				auto prod = _mm256_mullo_epi32 (epricev, minus);
-				auto prod_and = _mm256_and_si256(prod, mask);
-				acc_total = _mm256_add_epi32(acc_total, prod_and);						
+				vec_t mask = (containerv == p1.container) & (quantityv >= p1.min_quantity)
+					& (quantityv < p1.max_quantity);
+
+				acc_counts += mask & 1;
+				acc_total += mask & ((100 - discountv) * epricev);
 			}
 		};
 
