@@ -140,7 +140,12 @@ void init_q19data() {
 		throw std::runtime_error("need at least one brand");
 	}
 	
-	vector<int> max_values({FLAGS_num_brands - 1, 0, 7, 7, 127});
+	vector<int> num_distinct_values({FLAGS_num_brands, 1, 8, 1024, 101});
+	vector<int> max_values;
+	for (auto & i: num_distinct_values) {
+		max_values.push_back(i - 1);
+	}
+	
 	/*brand, container, quantity, eprice, discount */
 	g_q19data = alloc_lineitem_parts(FLAGS_array_size_elts);
 	
