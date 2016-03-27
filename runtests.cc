@@ -1,8 +1,8 @@
 #include "gtest/gtest.h"
-#include "impl.h"
 #include <array>
 #include <algorithm>
 #include "common.h"
+#include "impl_helper.h"
 
 using namespace std;
 
@@ -117,6 +117,56 @@ TEST(q19lite, gather) {
 
 TEST(q19lite, gather_easy) {
 	testq19_easy(q19lite_gather);
+}
+
+TEST(vector, vec){
+	int16_t g1[] = {100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116};
+	Vec16s grp1;
+	grp1.load(g1);
+	Vec16s grp1orig = grp1;
+	
+	int16_t g2[] =  {200, 201, 202, 203, 204, 205, 206, 207, 208, 209, 210, 211, 212, 213, 214, 215, 216};
+	Vec16s grp2;
+	grp2.load(g2);
+	Vec16s grp2orig = grp2;
+
+	bool done = false;	
+	while (!done) {
+	 cout << grp1;
+	 cout << grp2;
+
+	 Vec16s grp1old = grp1;
+	 Vec16s grp2old = grp2;
+
+	 grp1 = _mm256_unpacklo_epi16(grp1old, grp2old);
+	 grp2 = _mm256_unpackhi_epi16(grp1old, grp2old);
+
+	 cout << "--------" << endl;
+	 done = horizontal_and(grp1 == grp1orig && grp2 == grp2orig);
+ }
+
+ cout << grp1;
+ cout << grp2;
+}
+
+TEST(gather, test){
+	SALIGN data_t vec[] = {0,10,20,30,40,50,60,70,80,90,100,110,120,130,140,150,
+												 200,210,220,230,240,250,260,270,280,290,2100,2110,2120,2130,2140,2150};
+	SALIGN uint32_t pos[] = {0,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30};
+	SALIGN data_t expected_raw[] = {0,20,40,60,80,100,120,140,200,220,240,260,280,2100,2120,2140};
+	
+	auto res = gather(pos, vec);
+
+	vec_t actual(res);
+	vec_t expected;
+	expected.load(expected_raw);
+
+	cout << expected;
+	cout << res;
+
+	for (int i = 0; i < k_elts_per_vec; ++i) {
+		ASSERT_EQ(expected[i], actual[i]);
+	}	
 }
 
 
