@@ -27,6 +27,7 @@ DEFINE_int32(num_brands, 100, "selectivity of first predicate is 1/num_brands");
 
 DEFINE_int32(threads, 4, "upper limit");
 DEFINE_bool(sorted, false, "sorted");
+DEFINE_bool(clustered, false, "{true|false}");
 
 DEFINE_string(benchmark_filter, ".*", "filter regex");
 DEFINE_int32(benchmark_repetitions, 1, "repetitions");
@@ -36,6 +37,7 @@ DEFINE_string(benchmark_format,"tabular", "<tabular|json|csv>)");
 DEFINE_bool(benchmark_list_tests, false, "{true|false}");
 DEFINE_bool(use_pmu_counter, false, "{true|false}");
 DEFINE_bool(verify_uniform, false, "{true|false}");
+
 
 const int k_max = 128;
 const int middle = k_max >> 1;

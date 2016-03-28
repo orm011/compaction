@@ -192,6 +192,107 @@ q19res q19lite_gather (const lineitem_parts &d, q19params p1) {
 	return parallel_reduce(blocked_range<size_t>(0, d.len, FLAGS_grain_size), init, body, addq19);
 }
 
+
+
+void q19lite_cluster (const lineitem_parts &d, q19params p1, lineitem_parts &output) {
+	using namespace tbb;
+	auto body = [&](const auto & range)  {
+		auto len = range.end() - range.begin();
+		
+		auto brand = &d.brand[range.begin()];
+		auto eprice  = &d.eprice[range.begin()];
+		auto quantity = &d.quantity[range.begin()];
+		auto container = &d.container[range.begin()];
+		auto discount  = &d.discount[range.begin()];
+
+		auto obrand = &output.brand[range.begin()];
+		auto oeprice  = &output.eprice[range.begin()];
+		auto oquantity = &output.quantity[range.begin()];
+		auto ocontainer = &output.container[range.begin()];
+		auto odiscount  = &output.discount[range.begin()];
+		int output_j = 0;
+		
+		__declspec(align(64)) uint32_t buf_pos[k_buf_size] {};
+
+		__declspec(align(64)) data_t buf_brand_yes[k_buf_size] {};
+		__declspec(align(64)) data_t buf_brand_no[k_buf_size] {};
+
+		__declspec(align(64)) data_t buf_eprice_yes[k_buf_size] {};
+		__declspec(align(64)) data_t buf_eprice_no[k_buf_size] {};
+
+		__declspec(align(64)) data_t buf_quantity_yes[k_buf_size] {};
+		__declspec(align(64)) data_t buf_quantity_no[k_buf_size] {};
+
+		__declspec(align(64)) data_t buf_container_yes[k_buf_size] {};
+		__declspec(align(64)) data_t buf_container_no[k_buf_size] {};
+
+		__declspec(align(64)) data_t buf_discount_yes[k_buf_size] {};
+		__declspec(align(64)) data_t buf_discount_no[k_buf_size] {};
+
+		
+		auto flush_buffer = [&] (auto buf_size, bool yes) {
+			auto buf_brand = buf_brand_yes;
+			auto buf_eprice = buf_eprice_yes;
+			auto buf_quantity = buf_quantity_yes;
+			auto buf_container = buf_container_yes;
+			auto buf_discount = buf_discount_yes;
+			
+			if(!yes){
+				buf_brand = buf_brand_no;
+				buf_eprice = buf_eprice_no;
+				buf_quantity = buf_quantity_no;
+				buf_container = buf_container_no;
+				buf_discount = buf_discount_no;
+			}
+
+			for (int i = 0; i < buf_size; i += 1 ) {
+					obrand[output_j] = buf_brand[i];
+					oeprice[output_j] = buf_eprice[i];
+					oquantity[output_j] = buf_quantity[i];
+					ocontainer[output_j] = buf_container[i];
+					odiscount[output_j] = buf_discount[i];					
+					output_j ++;
+			}
+		};
+
+		int j = 0;
+		int neg_j = 0;
+		for (uint32_t i = 0; i < (range.end() - range.begin()); ++i) {
+			if (brand[i] == p1.brand){
+				buf_brand_yes[j] = brand[i];
+				buf_eprice_yes[j] = eprice[i];
+				buf_quantity_yes[j] = quantity[i];
+				buf_container_yes[j] = container[i];
+				buf_discount_yes[j] = discount[i];
+				++j;
+			} else {
+				buf_brand_no[neg_j] = brand[i];
+				buf_eprice_no[neg_j] = eprice[i];
+				buf_quantity_no[neg_j] = quantity[i];
+				buf_container_no[neg_j] = container[i];
+				buf_discount_no[neg_j] = discount[i];					
+				++neg_j;
+			}
+			
+			if (j == k_elts_per_buf) { // modulo
+				flush_buffer(k_elts_per_buf, true);
+				j = 0;
+			}
+
+			if (neg_j == k_elts_per_buf) {
+				flush_buffer(k_elts_per_buf, false);
+				neg_j = 0;
+			}
+		}
+		
+		flush_buffer(j, true);
+		flush_buffer(neg_j, false);
+	};
+
+	parallel_for(blocked_range<size_t>(0, d.len, FLAGS_grain_size), body);
+}
+
+
 void viz_example(const lineitem_parts &, int * ) {
 	// container, brand are categorical
 	// quantity, eprice.

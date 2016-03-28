@@ -38,6 +38,8 @@ static_assert(k_vec_size % sizeof(data_t) == 0, "data_t must divide vector");
 const static size_t k_elts_per_vec = k_vec_size/sizeof(data_t);
 const static size_t k_elts_per_buf = k_buf_size/sizeof(data_t);
 
+static_assert(((k_elts_per_buf - 1) & k_elts_per_buf) == 0, "elts per buf should be power of 2");
+
 template <typename T>  typename vec<T>::t gather(uint32_t const * index, T * table);
 
 
