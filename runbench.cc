@@ -136,6 +136,9 @@ q19res q19_expected = {-1, -1};
 
 lineitem_parts g_q19data;
 
+q19params params1;
+
+
 void init_q19data() {
 	using namespace tbb;
 	if (FLAGS_num_brands <= 0) {
@@ -171,6 +174,18 @@ void init_q19data() {
 		parallel_sort(rows.get(), rows.get() + g_q19data.len, compareQ19Row);
 		row_to_col(rows.get(), g_q19data);
 	}
+
+
+	params1.brand = 0;
+	params1.container = 0;
+	params1.max_quantity = 8;
+	params1.min_quantity = 0;
+
+	if (FLAGS_clustered){
+			auto clustered_q19data = alloc_lineitem_parts(FLAGS_array_size_elts);
+			q19lite_cluster(g_q19data, params1, clustered_q19data);
+			g_q19data = clustered_q19data;
+	}
 }
 
 template <typename Func> void q19_template(benchmark::State & state, Func f) {
@@ -181,11 +196,6 @@ template <typename Func> void q19_template(benchmark::State & state, Func f) {
 		ASSERT_EQ(q19_expected.sum, -1);
 	}
 
-	q19params params1;
-	params1.brand = 0;
-	params1.container = 0;
-	params1.max_quantity = 8;
-	params1.min_quantity = 0;
 
   if ( q19_expected.count < 0) {
 		tbb::task_scheduler_init init_disable(1); // reference always runs serially
