@@ -37,6 +37,8 @@ static_assert(k_vec_size % sizeof(data_t) == 0, "data_t must divide vector");
 
 const static size_t k_elts_per_vec = k_vec_size/sizeof(data_t);
 const static size_t k_elts_per_buf = k_buf_size/sizeof(data_t);
+static const size_t k_cache_line_size = 64;
+const static size_t k_elts_per_line = k_cache_line_size / sizeof(data_t);
 
 static_assert(((k_elts_per_buf - 1) & k_elts_per_buf) == 0, "elts per buf should be power of 2");
 

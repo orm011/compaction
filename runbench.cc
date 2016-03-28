@@ -3,7 +3,7 @@
 #include <tuple>
 #include <stdlib.h>
 #include "common.h"
-#include "impl.h"
+#include "impl_helper.h"
 #include "gtest/gtest.h"
 #include <string>
 #include <tbb/tbb.h>
@@ -14,10 +14,9 @@
 #include <limits>		
 #include <random>
 #include <functional>
+#include <cstdio>
 
 using namespace std;
-
-static const size_t cache_line_size = 64;
 
 DEFINE_int32(array_size_elts, 1<<10, "data size (num elements)");
 DEFINE_int32(array_size_mb, -1, "data size (MB)");
@@ -82,37 +81,46 @@ template <typename T> void init_data(T *d, size_t len, int32_t max)
 		
 		size_t total = parallel_reduce(blocked_range<size_t>(0, len, 1<<12), 0, check_body, [](const auto &a, const auto &b) { return a + b; });
 
-		cout << "count / len = " <<  total << "/" << len << " = " << ((double)total/len) * 100 << "% vs. " << ((double)1/(max+1)) << endl;
+		cout << "count / len = " <<  total << " / " << len << " = " << ((double)total/len) * 100 << " % vs. " << ((double)1/(max+1)) << endl;
 	}
 }
 
+struct red_res {
+	size_t words = 0;
+	size_t elts = 0;
+};
+
+red_res	operator+(const red_res &a, const red_res &b) {
+	red_res ans;
+	ans.words = a.words + b.words;
+	ans.elts = a.elts + b.elts;
+	return ans;
+}
 
 template <typename T, typename Pred>
-size_t count_words(T *d, size_t len, Pred pred, size_t elts_per_cache_line)
+red_res count_words_elts(T *d, size_t len, Pred pred, size_t elts_per_cache_line)
 {
 	using namespace tbb;
-	assert(0 == ((size_t)d) % cache_line_size);
-	assert(0 == (len % elts_per_cache_line));
+	assert(0 == ((size_t)d) % k_cache_line_size);
+	assert(0 == (len % k_elts_per_line));
 	
-	auto body = [&](const auto &r, const auto &init) -> size_t {
-		size_t word_count = init;
+	auto body = [&](const auto &r, const auto &init)  {
+		red_res res{};
 		
 		for ( size_t i = r.begin(); i < r.end(); i+=elts_per_cache_line ) {
-			unsigned int found = 0;
+			size_t found = 0;
 			for (size_t j = 0; j < elts_per_cache_line; ++j) {
-				found = found | pred(d[i + j]);
+				found += pred(d[i + j]);
 			}
 
-			word_count += found;
+			res = res + red_res {(found > 0), found};
 		}
 
-		return word_count;
+		return res + init;
 	};
 	
 	return parallel_reduce(blocked_range<size_t>(0, len, 1<<12),
-									0,
-									body,
-									[](const size_t & a, const size_t & b) ->size_t {return a + b;});
+												 red_res(), body, std::plus<red_res>());
 }
 
 
@@ -135,6 +143,7 @@ q19res q19_expected = {-1, -1};
 
 
 lineitem_parts g_q19data;
+lineitem_parts g_clustered_q19data;
 
 q19params params1;
 
@@ -182,10 +191,22 @@ void init_q19data() {
 	params1.min_quantity = 0;
 
 	if (FLAGS_clustered){
-			auto clustered_q19data = alloc_lineitem_parts(FLAGS_array_size_elts);
-			q19lite_cluster(g_q19data, params1, clustered_q19data);
-			g_q19data = clustered_q19data;
+		g_clustered_q19data = alloc_lineitem_parts(FLAGS_array_size_elts);
+		q19lite_cluster(g_q19data, params1, g_clustered_q19data);
 	}
+
+}
+
+void report_selectivities(red_res r, size_t data_len){
+	auto total_words = data_len/ k_elts_per_line;
+
+	auto word_sel = (((double) r.words) / total_words ) * 100;
+	auto word_MB = (r.words * 64) >> 20;
+	fprintf(stderr, "cache line level selectivity:\t%llu / %llu = %.1f %% ( %llu MB )\n", r.words, total_words, word_sel, word_MB);
+
+	auto elt_sel = (((double) r.elts) / data_len ) * 100;
+	auto elt_MB = (r.elts *sizeof(data_t)) >> 20;
+	fprintf(stderr, "row level selectivity:\t%llu / %llu = %.1f %% ( %llu MB )\n", r.elts, data_len, elt_sel, elt_MB);
 }
 
 template <typename Func> void q19_template(benchmark::State & state, Func f) {
@@ -203,14 +224,15 @@ template <typename Func> void q19_template(benchmark::State & state, Func f) {
 
 
 		auto brand_pred = [&](auto elt) { return elt == params1.brand;  };
-		auto elts_per_line = cache_line_size / sizeof(g_q19data.container[0]);
-		auto count = count_words(g_q19data.brand, g_q19data.len, brand_pred, elts_per_line);
-		
+		auto counts = count_words_elts(g_q19data.brand, g_q19data.len, brand_pred, k_elts_per_line);
+		report_selectivities(counts, g_q19data.len);		
+		ASSERT_EQ(counts.elts, q19_expected.count); // make sure the other predicates aren't filtering out things for now.
 
-		cerr << "item level selectivity: " << q19_expected.count << "/" << g_q19data.len << " ( actual: " << (((double)(q19_expected.count))/g_q19data.len)*100  << "% vs. wanted "
-				 << (((double)1)/FLAGS_num_brands) * 100 << "% ) "  << endl;
-		cout << "elts per line " << elts_per_line << endl;;
-		cerr << "cache line level selectivity: "  << count << "/" <<  g_q19data.len / elts_per_line  << " ( " << (((double) count) / ( g_q19data.len / elts_per_line)) * 100 << "%, " << ((count*cache_line_size) >> 20) << " MB)" << endl;
+		if (FLAGS_clustered){
+			auto counts = count_words_elts(g_clustered_q19data.brand, g_clustered_q19data.len, brand_pred, k_elts_per_line);
+			cerr << "stats for clustered data" << endl;
+			report_selectivities(counts, g_clustered_q19data.len);		
+		}
 	}
 
 
@@ -220,9 +242,17 @@ template <typename Func> void q19_template(benchmark::State & state, Func f) {
 	if (FLAGS_use_pmu_counter) {
 		before = m->getSocketCounterState(0);
 	}
-  while (state.KeepRunning()) {
-    res = f(g_q19data, params1);
-  }
+
+	if (FLAGS_clustered){
+		while (state.KeepRunning()) {
+			res = f(g_clustered_q19data, params1);
+		}
+	} else {
+		while (state.KeepRunning()) {
+			res = f(g_q19data, params1);
+		}
+	}
+	
 	if (FLAGS_use_pmu_counter) {
 			after = m->getSocketCounterState(0);
 			uint64 read =  getBytesReadFromMC (before, after);
