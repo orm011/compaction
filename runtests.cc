@@ -3,6 +3,7 @@
 #include <algorithm>
 #include "common.h"
 #include "impl_helper.h"
+#include <set>
 
 using namespace std;
 
@@ -149,7 +150,8 @@ TEST(vector, vec){
  cout << grp2;
 }
 
-TEST(gather, test){
+TEST(util, weak_gather){
+	
 	SALIGN data_t vec[64];
 	for (int i =0; i < 64; ++i){
 		vec[i] = (int8_t)i;
@@ -159,22 +161,86 @@ TEST(gather, test){
 
 	SALIGN data_t expected_raw[32];
 	for (int i =0 ; i < 32; ++i){
-		pos[i] = 2*(uint8_t)i;
+		expected_raw[i] = 2*i;
 	}
 	auto res = gather(pos, vec);
 
-	vec_t actual(res);
+	vec_t actual;
+	actual.load(&res);
+	
 	vec_t expected;
 	expected.load(expected_raw);
 
 	cout << expected;
 	cout << res;
-
 	for (int i = 0; i < k_elts_per_vec; ++i) {
 		ASSERT_EQ(expected[i], actual[i]);
 	}	
 }
 
+
+TEST(util, basicVec4qVec){
+	Vec4q vr(0,1,2,3);
+	
+	Vec4qVec<1> v;
+	v.arr[0].load(&vr);
+
+	Vec4qVec<2> w(0);
+	w.assign_at<0>(v);
+	for (int i =0; i < 4; ++i){
+		ASSERT_EQ(v.arr[0][i], w.arr[0][i]);
+		ASSERT_EQ(v.arr[0][i], w[i]);
+	}
+
+	for (int i = 0; i < 4;  ++i){
+		ASSERT_EQ(0, w[i + 4]);
+	}
+
+	Vec4q v2r(1,3,5,7);
+	Vec4qVec<1> v2;
+	v2.arr[0].load(&v2r);
+	w.assign_at<1>(v2);
+	
+	for (int i =0; i < 4; ++i) {
+		ASSERT_EQ(v.arr[0][i], w[i]);
+		ASSERT_EQ(v2.arr[0][i], w[i + 4]);
+	}
+}
+
+
+TEST(util, extend_int){
+	int32_t  ints_raw[64];
+	for (int i = 0; i < 64; ++i) {
+		ints_raw[i] = i;
+	}
+
+	Vec8i ints;
+	ints.load(ints_raw);
+
+	Vec4qVec<2> expanded = extend(ints);
+
+	for (int i = 0; i < 8; ++i){
+		ASSERT_EQ(ints_raw[i], expanded[i]);
+	}
+}
+
+
+
+TEST(util, extend_char){
+	int8_t  chars_raw[64];
+	for (int i = 0; i < 64; ++i) {
+		chars_raw[i] = i;
+	}
+
+	Vec32c chars;
+	chars.load(chars_raw);
+
+	Vec4qVec<8> expanded = extend(chars);
+
+	for (int i = 0; i < 32; ++i){
+		ASSERT_EQ(chars_raw[i], expanded.arr[i/4][i%4]);
+	}
+}
 
 int main(int argc, char **argv) {
   ::testing::InitGoogleTest(&argc, argv);

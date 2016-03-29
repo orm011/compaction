@@ -40,6 +40,107 @@ const static size_t k_elts_per_buf = k_buf_size/sizeof(data_t);
 static const size_t k_cache_line_size = 64;
 const static size_t k_elts_per_line = k_cache_line_size / sizeof(data_t);
 
+static const size_t k_acc_size = sizeof(int64_t)/sizeof(data_t);
+
+template <size_t N> struct Vec4qVec {
+	SALIGN Vec4q arr[N] {};
+
+	Vec4qVec() = default;
+	
+	Vec4qVec(int64_t init){
+		auto init_vec = Vec4q(init);
+		for (int i = 0; i < N; ++i) {
+			arr[i].load(&init_vec);
+		}
+	}
+
+	inline Vec4qVec & operator=(const Vec4qVec &v)
+	{
+		for (int i = 0; i < N; ++i){
+			arr[i] = v.arr[i];
+		}
+	}
+
+	inline Vec4qVec & operator+=(const Vec4qVec<N> &right)
+		{
+			for (int i = 0; i < N; ++i) {
+				arr[i] += right.arr[i];
+			}
+
+			return *this;
+		}
+
+	template <size_t S, size_t M> void assign_at(const Vec4qVec<M> &src){
+		static_assert(S + M <= N, "copy would overflow");
+		for (int i = S; i < S + M; ++i){
+			arr[i].load_a(&src.arr[i - S]);
+		}
+	}
+
+	int64_t operator[](size_t i){
+		return arr[i/4][i%4];
+	}
+
+
+	inline int64_t sum_all(){
+		int64_t total = 0;
+		for (int i =0 ; i < N; ++i){
+			total+= horizontal_add(arr[i]);
+		}
+
+		return total;
+	}
+};
+
+inline Vec4qVec<1> extend(Vec4q quads){
+	Vec4qVec<1> ans;
+	ans.arr[0] = quads;
+	return ans;
+}
+
+inline Vec4qVec<2> extend(Vec8i ints){
+	Vec4qVec<2> ans;
+	
+	Vec4q tmp1 = extend_low(ints);
+	Vec4q tmp2 = extend_high(ints);
+
+ 	Vec4qVec<1> low = extend(tmp1);
+	Vec4qVec<1> high = extend(tmp2);
+	
+	ans.assign_at<0>(low);
+	ans.assign_at<1>(high);
+	return ans;
+}
+
+inline Vec4qVec<4> extend(Vec16s shorts){
+	Vec4qVec<4> ans;
+	Vec8i tmp1 = extend_low(shorts);
+	Vec8i tmp2 = extend_high(shorts);
+
+	Vec4qVec<2> low = extend(tmp1);
+	Vec4qVec<2> high = extend(tmp2);
+
+	ans.assign_at<0>(low);
+	ans.assign_at<2>(high);
+	
+	return ans;	
+}
+
+inline Vec4qVec<8> extend(Vec32c chars){
+ 	Vec4qVec<8> ans(0);
+
+	Vec16s tmp1 = extend_low(chars);
+	Vec16s tmp2 = extend_high(chars);
+
+	Vec4qVec<4> low = extend(tmp1);
+	Vec4qVec<4> high = extend(tmp2);
+
+	ans.assign_at<0>(low);
+	ans.assign_at<4>(high);
+	return ans;	
+}
+
+
 static_assert(((k_elts_per_buf - 1) & k_elts_per_buf) == 0, "elts per buf should be power of 2");
 
 template <typename T>  typename vec<T>::t gather(uint32_t const * index, T * table);

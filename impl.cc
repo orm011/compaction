@@ -132,13 +132,17 @@ q19res q19lite_gather (const lineitem_parts &d, q19params p1) {
 		auto starteprice  = &d.eprice[range.begin()];
 		auto startdiscount  = &d.discount[range.begin()];
 
-		vec_t acc_counts(0);
-		vec_t acc_total(0);
+		Vec4qVec<k_acc_size> acc_counts(0);
+		Vec4qVec<k_acc_size> acc_total(0);
 		q19res total = init;
 
+		constexpr auto modulus = ((uint64_t)std::numeric_limits<data_t>::max()) + 1;
+		
+		
 		__declspec(align(64)) uint32_t buf[k_elts_per_buf] {};
 		
 		auto process_buffer = [&] (auto buf_size) {
+#pragma forceinline recursive
 			for (int idx = 0; idx < buf_size; idx += k_elts_per_vec ) {
 				auto indices =  &buf[idx];
 
@@ -149,15 +153,17 @@ q19res q19lite_gather (const lineitem_parts &d, q19params p1) {
 
 				vec_t mask = (containerv == p1.container) & (quantityv >= p1.min_quantity)
 					& (quantityv < p1.max_quantity);
-
-				acc_counts += mask & 1;
-				acc_total += mask & ((100 - discountv) * epricev);
+#pragma forceinline recursive
+				acc_counts += extend(mask & 1);
+				acc_total += extend(mask & ((100 - discountv) * epricev));
 			}
 		};
 
 		int j = 0;
 		vec_t currbrands;
 		const auto k_watermark = k_elts_per_buf - k_elts_per_vec;
+		
+#pragma forceinline recursive
 		for (uint32_t i = 0; i < (range.end() - range.begin()); i+= k_elts_per_vec) {
 			currbrands.load_a(&startbrand[i]);
 			auto quals = currbrands == p1.brand;
@@ -196,8 +202,8 @@ q19res q19lite_gather (const lineitem_parts &d, q19params p1) {
 		}
 		
 		
-		total.count += sum_lanes_8(acc_counts);
-		total.sum += sum_lanes_8(acc_total);
+		total.count += acc_counts.sum_all();
+		total.sum += acc_total.sum_all();
 		return  total;
 	};
 
