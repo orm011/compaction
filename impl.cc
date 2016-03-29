@@ -2,7 +2,7 @@
 #include <tbb/tbb.h>
 #include <gflags/gflags.h>
 #include "impl_helper.h"
-
+#include "mask_table.h"
 
 DEFINE_int32(grain_size, (1 << 14)/sizeof(data_t), "minimum amount of work (num array elts)");
 
@@ -122,7 +122,6 @@ q19res q19lite_all_branched (const lineitem_parts &d, q19params p1) {
 
 }
 
-
 q19res q19lite_gather (const lineitem_parts &d, q19params p1) {
 	using namespace tbb;
 	auto body = 	[&](const auto & range, const auto & init)  {
@@ -157,13 +156,26 @@ q19res q19lite_gather (const lineitem_parts &d, q19params p1) {
 		};
 
 		int j = 0;
-		for (uint32_t i = 0; i < (range.end() - range.begin()); ++i) {
-			buf[j] = i;
-			j += (startbrand[i] == p1.brand);
+		vec_t currbrands;
+		const auto k_watermark = k_elts_per_buf - k_elts_per_vec;
+		for (uint32_t i = 0; i < (range.end() - range.begin()); i+= k_elts_per_vec) {
+			currbrands.load_a(&startbrand[i]);
+			auto quals = currbrands == p1.brand;
+			auto charmask = _mm256_movemask_ps(_mm256_castsi256_ps(quals));
+			auto delta_j = _mm_popcnt_u64(charmask);
+			vec_t perm_mask;
+			perm_mask.load_a(&mask_table[charmask]);
+			auto store_mask = _mm256_permutevar8x32_epi32(quals, perm_mask);
+			auto store_pos = perm_mask + i;
+			_mm256_maskstore_epi32((int*)&buf[j], store_pos, store_mask);
+			j+=delta_j;
 			
-			if (j == k_elts_per_buf) {
-				process_buffer(k_elts_per_buf);
-				j = 0;
+			if (j > k_watermark) {
+				process_buffer(k_watermark);
+				vec_t last;
+				last.load_a(&buf[k_watermark]);
+				last.store_a(buf);
+				j = j - k_watermark;
 			}
 		}
 		
