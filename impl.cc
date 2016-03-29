@@ -167,10 +167,10 @@ q19res q19lite_gather (const lineitem_parts &d, q19params p1) {
 			perm_mask.load_a(&mask_table[charmask]);
 			auto store_mask = _mm256_permutevar8x32_epi32(quals, perm_mask);
 			auto store_pos = perm_mask + i;
-			_mm256_maskstore_epi32((int*)&buf[j], store_pos, store_mask);
+			_mm256_maskstore_epi32((int*)&buf[j], store_mask, store_pos);
 			j+=delta_j;
 			
-			if (j > k_watermark) {
+			if (j >= k_watermark) {
 				process_buffer(k_watermark);
 				vec_t last;
 				last.load_a(&buf[k_watermark]);
