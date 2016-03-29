@@ -136,7 +136,7 @@ q19res q19lite_gather (const lineitem_parts &d, q19params p1) {
 		vec_t acc_total(0);
 		q19res total = init;
 
-		__declspec(align(64)) uint32_t buf[k_buf_size] {};
+		__declspec(align(64)) uint32_t buf[k_elts_per_buf] {};
 		
 		auto process_buffer = [&] (auto buf_size) {
 			for (int idx = 0; idx < buf_size; idx += k_elts_per_vec ) {
@@ -224,22 +224,22 @@ void q19lite_cluster (const lineitem_parts &d, q19params p1, lineitem_parts &out
 		auto odiscount  = &output.discount[range.begin()];
 		int output_j = 0;
 		
-		__declspec(align(64)) uint32_t buf_pos[k_buf_size] {};
+		__declspec(align(64)) uint32_t buf_pos[k_elts_per_buf] {};
 
-		__declspec(align(64)) data_t buf_brand_yes[k_buf_size] {};
-		__declspec(align(64)) data_t buf_brand_no[k_buf_size] {};
+		__declspec(align(64)) data_t buf_brand_yes[k_elts_per_buf] {};
+		__declspec(align(64)) data_t buf_brand_no[k_elts_per_buf] {};
 
-		__declspec(align(64)) data_t buf_eprice_yes[k_buf_size] {};
-		__declspec(align(64)) data_t buf_eprice_no[k_buf_size] {};
+		__declspec(align(64)) data_t buf_eprice_yes[k_elts_per_buf] {};
+		__declspec(align(64)) data_t buf_eprice_no[k_elts_per_buf] {};
 
-		__declspec(align(64)) data_t buf_quantity_yes[k_buf_size] {};
-		__declspec(align(64)) data_t buf_quantity_no[k_buf_size] {};
+		__declspec(align(64)) data_t buf_quantity_yes[k_elts_per_buf] {};
+		__declspec(align(64)) data_t buf_quantity_no[k_elts_per_buf] {};
 
-		__declspec(align(64)) data_t buf_container_yes[k_buf_size] {};
-		__declspec(align(64)) data_t buf_container_no[k_buf_size] {};
+		__declspec(align(64)) data_t buf_container_yes[k_elts_per_buf] {};
+		__declspec(align(64)) data_t buf_container_no[k_elts_per_buf] {};
 
-		__declspec(align(64)) data_t buf_discount_yes[k_buf_size] {};
-		__declspec(align(64)) data_t buf_discount_no[k_buf_size] {};
+		__declspec(align(64)) data_t buf_discount_yes[k_elts_per_buf] {};
+		__declspec(align(64)) data_t buf_discount_no[k_elts_per_buf] {};
 
 		
 		auto flush_buffer = [&] (auto buf_size, bool yes) {

@@ -46,14 +46,35 @@ template <typename T>  typename vec<T>::t gather(uint32_t const * index, T * tab
 
 
 template <> typename vec<int8_t>::t gather<int8_t>(uint32_t const * index, int8_t * table){
-	__m256i tmp1 = _mm256_load_si256((__m256i const *)index);
-	auto grp1 =  _mm256_i32gather_epi32((int32_t*)table, tmp1, sizeof(int16_t));
-	__m256i tmp2 = _mm256_load_si256(((__m256i const *)index) + 1 );
-	auto grp2 =  _mm256_i32gather_epi32((int32_t*)table, tmp2, sizeof(int16_t));
 
+	// all 32 next positions 
+	__m256i tmp1 = _mm256_load_si256((__m256i const *)index);
+	auto grp1 =  _mm256_i32gather_epi32((int32_t*)table, tmp1, 1);
+	__m256i tmp2 = _mm256_load_si256(((__m256i const *)index) + 1);
+	auto grp2 =  _mm256_i32gather_epi32((int32_t*)table, tmp2, 1);
+	__m256i tmp3 = _mm256_load_si256(((__m256i const *)index) + 2);
+	auto grp3 =  _mm256_i32gather_epi32((int32_t*)table, tmp3, 1);
+	__m256i tmp4 = _mm256_load_si256(((__m256i const *)index) + 3);
+	auto grp4 =  _mm256_i32gather_epi32((int32_t*)table, tmp4, 1);
+	
 	// will reorder things, but thats okay since it reorders every column equally
-	auto merged = _mm256_unpacklo_epi16(grp1, grp2);
-	return merged;
+	auto collect_valid =
+		_mm256_setr_epi8(0, 4, 8, 12, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+										 0, 4, 8, 12, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1);
+
+	// all 4 valid chars (per 128 bit lane) get grouped on the low side of the lane.
+	auto grp1left = _mm256_shuffle_epi8(grp1, collect_valid);
+	auto grp2left = _mm256_shuffle_epi8(grp2, collect_valid);
+	auto grp3left = _mm256_shuffle_epi8(grp3, collect_valid);
+	auto grp4left = _mm256_shuffle_epi8(grp4, collect_valid);
+
+	// lower 8 chars of each lane get interleaved. the first 8 chars of each lane
+	// are valid now
+	auto grp12merged = _mm256_unpacklo_epi32(grp1left, grp2left);
+	auto grp34merged = _mm256_unpacklo_epi32(grp3left, grp4left);
+
+	auto lower = _mm256_unpacklo_epi64(grp12merged, grp34merged); // slightly reordered
+	return lower;
 }
 
 template <> typename vec<int16_t>::t gather<int16_t>(uint32_t const * index, int16_t * table)
