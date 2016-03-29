@@ -7,7 +7,7 @@
 using namespace std;
 
 __declspec (align(64)) data_t brand[] =
-	{ 1, 2, 3, 4, 2, 3, 2, 1};
+	{ 1, 2, 3, 4, 2, 1, 2, 1};
 
 __declspec (align(64)) data_t container[] =
 	{ 1, 4, 3, 4, 4, 3, 2, 1};
@@ -150,11 +150,17 @@ TEST(vector, vec){
 }
 
 TEST(gather, test){
-	SALIGN data_t vec[] = {0,10,20,30,40,50,60,70,80,90,100,110,120,130,140,150,
-												 200,210,220,230,240,250,260,270,280,290,2100,2110,2120,2130,2140,2150};
-	SALIGN uint32_t pos[] = {0,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30};
-	SALIGN data_t expected_raw[] = {0,20,40,60,80,100,120,140,200,220,240,260,280,2100,2120,2140};
-	
+	SALIGN data_t vec[64];
+	for (int i =0; i < 64; ++i){
+		vec[i] = (int8_t)i;
+	}
+
+	SALIGN uint32_t pos[32] = {0,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30};
+
+	SALIGN data_t expected_raw[32];
+	for (int i =0 ; i < 32; ++i){
+		pos[i] = 2*(uint8_t)i;
+	}
 	auto res = gather(pos, vec);
 
 	vec_t actual(res);

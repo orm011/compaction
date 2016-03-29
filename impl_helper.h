@@ -125,10 +125,19 @@ template <> typename vec<int64_t>::t gather<int64_t>(uint32_t const * index, int
 }
 
 
+inline ostream& operator<<(ostream &o, const Vec32c & v){
+	o << "Vec32c ";
+	for (int i = 0; i < 32; ++i) {
+		o << std::setfill('0') << std::setw(2) << (uint32_t)v[i] << ",";
+	}
+	o << endl;
+	return o;
+}
+
 inline ostream& operator<<(ostream &o, const Vec16s & v){
 	o << "Vec16s ";
 	for (int i = 0; i < 16; ++i){
-		o << std::setfill('0') << std::setw(2) << v[i] << ",";
+		o << std::setfill('0') << std::setw(2) << (uint32_t)v[i] << ",";
 	}
 	o << endl;
 	return o;
