@@ -157,25 +157,33 @@ TEST(util, weak_gather){
 		vec[i] = (int8_t)i;
 	}
 
-	SALIGN uint32_t pos[32] = {0,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30};
-
-	SALIGN data_t expected_raw[32];
-	for (int i =0 ; i < 32; ++i){
-		expected_raw[i] = 2*i;
+	SALIGN uint32_t pos[32];
+	for (int i = 0; i < 32; ++i){
+		pos[i] = i << 1;
 	}
+
 	auto res = gather(pos, vec);
+
+	std::set<data_t> expected_set;
+	for (int i = 0; i < k_elts_per_vec; ++i){
+		expected_set.emplace(vec[pos[i]]);
+	}
+	ASSERT_EQ(k_elts_per_vec, expected_set.size());
+
 
 	vec_t actual;
 	actual.load(&res);
-	
-	vec_t expected;
-	expected.load(expected_raw);
-
-	cout << expected;
-	cout << res;
+	std::set<data_t> actual_set;
 	for (int i = 0; i < k_elts_per_vec; ++i) {
-		ASSERT_EQ(expected[i], actual[i]);
-	}	
+		actual_set.emplace(actual[i]);
+	}
+	ASSERT_EQ(k_elts_per_vec, actual_set.size()); // also no repeats here
+	
+	//cout << res;
+	
+	for (auto &elt : actual_set) {
+		ASSERT_TRUE(expected_set.count(elt));
+	}
 }
 
 

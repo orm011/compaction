@@ -153,7 +153,8 @@ q19res q19lite_gather (const lineitem_parts &d, q19params p1) {
 
 				vec_t mask = (containerv == p1.container) & (quantityv >= p1.min_quantity)
 					& (quantityv < p1.max_quantity);
-#pragma forceinline recursive
+
+				
 				acc_counts += extend(mask & 1);
 				acc_total += extend(mask & ((100 - discountv) * epricev));
 			}
