@@ -190,6 +190,7 @@ q19res q19lite_gather (const lineitem_parts &d, q19params p1) {
 		}
 		
 		const auto vec_tail_end = (j / k_elts_per_vec) * k_elts_per_vec ;
+		#pragma forceinline recursive
 		process_buffer(vec_tail_end);
 
 		for (int idx = vec_tail_end; idx < j; ++idx) {
