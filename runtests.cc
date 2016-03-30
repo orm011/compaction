@@ -7,27 +7,53 @@
 
 using namespace std;
 
-__declspec (align(64)) data_t brand[] =
-	{ 1, 2, 3, 4, 2, 1, 2, 1};
+__declspec (align(64)) data_t brand[32] =
+	{ 1, 2, 3, 4, 2, 1, 2, 1,
+	  1, 2, 3, 4, 2, 1, 2, 1,
+		1, 2, 3, 4, 2, 1, 2, 1,
+		1, 2, 3, 4, 2, 1, 2, 1,};
 
-__declspec (align(64)) data_t container[] =
-	{ 1, 4, 3, 4, 4, 3, 2, 1};
+__declspec (align(64)) data_t container[32] =
+	{ 1, 4, 3, 4, 4, 3, 2, 1,
+		1, 4, 3, 4, 4, 3, 2, 1,
+		1, 4, 3, 4, 4, 3, 2, 1,
+		1, 4, 3, 4, 4, 3, 2, 1};
 
-__declspec (align(64)) data_t quantity[] =
-	{ 9,10,11,12,13,14,15,16};
+__declspec (align(64)) data_t quantity[32] =
+	{ 9,10,11,12,13,14,15,16,
+		9,10,11,12,13,14,15,16,
+		9,10,11,12,13,14,15,16,
+		9,10,11,12,13,14,15,16};
 
-__declspec (align(64)) data_t eprice[] =
-	{ 1, 1, 1, 1, 1, 1, 1, 1};
+__declspec (align(64)) data_t eprice[32] =
+	{ 1, 1, 1, 1, 1, 1, 1, 1,
+		1, 1, 1, 1, 1, 1, 1, 1,
+		1, 1, 1, 1, 1, 1, 1, 1,
+		1, 1, 1, 1, 1, 1, 1, 1,};
 
-__declspec (align(64)) data_t discount[] =
-	{98,98,98,98,98,98,98,98};
+__declspec (align(64)) data_t discount[32] =
+	{98,98,98,98,98,98,98,98,
+	 98,98,98,98,98,98,98,98,
+	 98,98,98,98,98,98,98,98,
+	 98,98,98,98,98,98,98,98,};
 
-__declspec (align(64)) data_t brand_easy[] =
-	{1, 1, 1, 1, 1, 1, 1, 1};
-__declspec (align(64)) data_t container_easy[] =
-	{1, 1, 1, 1, 1, 1, 1, 1};
-__declspec (align(64)) data_t quantity_easy[] =
-	{1, 1, 1, 1, 1, 1, 1, 1};
+__declspec (align(64)) data_t brand_easy[32] =
+	{ 1, 1, 1, 1, 1, 1, 1, 1,
+	  1, 1, 1, 1, 1, 1, 1, 1,
+		1, 1, 1, 1, 1, 1, 1, 1,
+		1, 1, 1, 1, 1, 1, 1, 1,};
+		
+__declspec (align(64)) data_t container_easy[32] =
+	{ 1, 1, 1, 1, 1, 1, 1, 1,
+		1, 1, 1, 1, 1, 1, 1, 1,
+		1, 1, 1, 1, 1, 1, 1, 1,
+		1, 1, 1, 1, 1, 1, 1, 1,};
+
+__declspec (align(64)) data_t quantity_easy[32] =
+	{ 1, 1, 1, 1, 1, 1, 1, 1,
+		1, 1, 1, 1, 1, 1, 1, 1,
+		1, 1, 1, 1, 1, 1, 1, 1,
+		1, 1, 1, 1, 1, 1, 1, 1,};
 
 
 // should qualify:
@@ -71,7 +97,7 @@ TEST(util, col_to_row_to_col){
 
 template <typename F> void testq19(F f){
 	lineitem_parts d;
-	d.len = 8;
+	d.len = 32;
 	d.eprice = eprice;
 	d.discount = discount;
 	d.quantity = quantity;
@@ -80,13 +106,13 @@ template <typename F> void testq19(F f){
 	d.brand = brand;
 		
 	auto result = f(d, test_params1);
-	ASSERT_EQ(1, result.count);
-	ASSERT_EQ(2, result.sum);
+	ASSERT_EQ(4, result.count);
+	ASSERT_EQ(8, result.sum);
 }
 
 template <typename F> void testq19_easy(F f){
 	lineitem_parts d;
-	d.len = 8;
+	d.len = 32;
 	d.eprice = eprice;
 	d.discount = discount;
 
@@ -95,8 +121,8 @@ template <typename F> void testq19_easy(F f){
 	d.brand = brand_easy;
 		
 	auto result = f(d, test_params1);
-	ASSERT_EQ(8, result.count);
-	ASSERT_EQ(16, result.sum);
+	ASSERT_EQ(32, result.count);
+	ASSERT_EQ(64, result.sum);
 }
 
 
@@ -133,21 +159,20 @@ TEST(vector, vec){
 
 	bool done = false;	
 	while (!done) {
-	 cout << grp1;
-	 cout << grp2;
+		//	 cout << grp1;
+		//cout << grp2;
 
 	 Vec16s grp1old = grp1;
 	 Vec16s grp2old = grp2;
 
-	 grp1 = _mm256_unpacklo_epi16(grp1old, grp2old);
-	 grp2 = _mm256_unpackhi_epi16(grp1old, grp2old);
-
-	 cout << "--------" << endl;
+	 //grp1 = _mm256_unpacklo_epi16(grp1old, grp2old);
+	 //grp2 = _mm256_unpackhi_epi16(grp1old, grp2old);
+	 //cout << "--------" << endl;
 	 done = horizontal_and(grp1 == grp1orig && grp2 == grp2orig);
  }
 
- cout << grp1;
- cout << grp2;
+	//cout << grp1;
+	//cout << grp2;
 }
 
 TEST(util, weak_gather){
