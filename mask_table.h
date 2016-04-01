@@ -1,4 +1,7 @@
-static const Vec8i mask_table[256] = {
+#ifndef MASKTABLE
+#define MASKTABLE
+
+static const Vec8ui mask_table[256] = {
 				 { 0, 1, 2, 3, 4, 5, 6, 7, },
 				 { 0, 1, 2, 3, 4, 5, 6, 7, },
 				 { 1, 0, 2, 3, 4, 5, 6, 7, },
@@ -256,3 +259,4 @@ static const Vec8i mask_table[256] = {
 				 { 1, 2, 3, 4, 5, 6, 7, 0, },
 				 { 0, 1, 2, 3, 4, 5, 6, 7, },
 };
+#endif

@@ -2,6 +2,7 @@
 #include <vectorclass/vectorclass.h>
 #include <iostream>
 #include <iomanip>
+#include "mask_table.h"
 
 #define SALIGN __declspec (align(64))
 
@@ -144,6 +145,30 @@ inline Vec4qVec<8> extend(Vec32c chars){
 static_assert(((k_elts_per_buf - 1) & k_elts_per_buf) == 0, "elts per buf should be power of 2");
 
 template <typename T>  typename vec<T>::t gather(uint32_t const * index, T * table);
+
+template <typename T>  void buffer_addresses(uint32_t *, const T *, int *, uint32_t *, const q19params &);
+
+template <> void buffer_addresses<int8_t>(uint32_t *iptr, const int8_t * startbrand, int *jptr, uint32_t *buf, const q19params &p1)
+{
+	auto &i = *iptr;
+	auto &j = *jptr;
+	
+	vec_t currbrands;
+	currbrands.load_a(&startbrand[i]);
+	auto quals = currbrands == p1.brand;
+	auto bigmask = _mm256_movemask_epi8(quals);
+	
+	for (int sub = 0; sub < 4; ++sub) {
+		auto charmask = (bigmask >> sub*8) & 0xff; // pick the lowest 8 bits
+		auto delta_j = _mm_popcnt_u64(charmask);
+		Vec8ui perm_mask;
+		perm_mask.load_a(&mask_table[charmask]);
+		auto offset = i + sub*8;
+		perm_mask += offset;
+		_mm256_storeu_si256((__m256i*)&buf[j], perm_mask);
+		j+=delta_j;
+	}
+}
 
 
 template <> typename vec<int8_t>::t gather<int8_t>(uint32_t const * index, int8_t * table){

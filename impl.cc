@@ -161,25 +161,12 @@ q19res q19lite_gather (const lineitem_parts &d, q19params p1) {
 		};
 
 		int j = 0;
-		vec_t currbrands;
 		const auto k_watermark = k_elts_per_buf - k_elts_per_vec;
 		
 #pragma forceinline recursive
 		for (uint32_t i = 0; i < (range.end() - range.begin()); i+= k_elts_per_vec) {
-			currbrands.load_a(&startbrand[i]);
-			auto quals = currbrands == p1.brand;
-			auto bigmask = _mm256_movemask_ps(_mm256_castsi256_ps(quals));
-
-			for (int sub = 0; sub < 4; ++sub){
-				auto charmask = (bigmask >> sub*8) & 0xff; // pick the lowest 8 bits
-				auto delta_j = _mm_popcnt_u64(charmask);
-				vec_t perm_mask;
-				perm_mask.load_a(&mask_table[charmask]);
-				auto store_pos = perm_mask + i + sub;
-				_mm256_storeu_si256((__m256i*)&buf[j], store_pos);
-				j+=delta_j;
-			}
-
+			buffer_addresses(&i, startbrand, &j, (uint32_t*)buf, p1);
+			
 			if (j >= k_watermark) {
 				process_buffer(k_watermark);
 				vec_t last;
