@@ -64,9 +64,13 @@ q19res q19lite_all_masked_vectorized(const lineitem_parts &d, q19params p1)
 		auto total = init;
 		#pragma  vector always
 		for (int i = range.begin(); i < range.end(); ++i) {
-			int64_t mask = Q19PRED(d, i, p1, &);
-			total.sum += (~(mask-1)) &  (((int64_t)d.eprice[i]) * (100 - d.discount[i]));
-			total.count += mask;
+			int64_t res = Q19PRED(d, i, p1, &);
+			int64_t mask = ~(res-1);
+			int64_t expanded_discount = d.discount[i];
+			int64_t expanded_price =  d.eprice[i];
+
+			total.sum +=  mask & (expanded_price * (100 - expanded_discount));
+			total.count += res;
 		}
 
 		return total;
@@ -85,9 +89,13 @@ q19res q19lite_all_masked_scalar(const lineitem_parts &d, q19params p1)
 		auto total = init;
 		#pragma novector
 		for (int i = range.begin(); i < range.end(); ++i) {
-			int64_t mask = Q19PRED(d, i, p1, &);
-			total.sum += (~(mask-1)) &  (((int64_t)d.eprice[i]) * (100 - d.discount[i]));
-			total.count += mask;
+			int64_t res = Q19PRED(d, i, p1, &);
+			int64_t mask = ~(res-1);
+			int64_t expanded_discount = d.discount[i];
+			int64_t expanded_price =  d.eprice[i];
+
+			total.sum +=  mask & (expanded_price * (100 - expanded_discount));
+			total.count += res;
 		}
 
 		return total;
@@ -103,18 +111,33 @@ q19res q19lite_all_branched (const lineitem_parts &d, q19params p1) {
 	using namespace tbb;
 	
 	auto body = 	[&](const auto & range, const auto & init)  {
-		q19res total = init;
+		q19res total = {0,0};
 		#pragma novector
 		for (int i = range.begin(); i < range.end(); ++i) {
 			int64_t mask = Q19PRED(d, i, p1, &&);
 
+
 			if (mask)
 				{
-					total.sum +=  ((int64_t)d.eprice[i]) * (100 - d.discount[i]);
+					int64_t expanded_discount = d.discount[i];
+					int64_t expanded_price =  d.eprice[i];
+					assert(expanded_discount >= 0);
+					assert(expanded_discount <= 100);
+					assert(expanded_price >= 0);
+					int64_t discounted_price = (expanded_price * (100 - expanded_discount));
+					assert(discounted_price >= 0);
+					total.sum += discounted_price;
+					// cout << discounted_price << ","; 
+					// cout << total.sum;
+					// cout << endl;
 					total.count += 1;
 				}
 		}
 
+		//cout << total.sum << ", ";
+		//cout.flush();
+		total.sum += init.sum;
+		total.count += init.count;
 		return  total;
 	};
 

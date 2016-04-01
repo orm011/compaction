@@ -55,6 +55,22 @@ __declspec (align(64)) data_t quantity_easy[32] =
 		1, 1, 1, 1, 1, 1, 1, 1,
 		1, 1, 1, 1, 1, 1, 1, 1,};
 
+__declspec (align(64)) data_t brand_case[32] =
+	{0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,};
+
+__declspec (align(64)) data_t eprice_case[32] =
+	{0,1,0,0,1,1,0,1,0,1,0,0,1,0,0,1,1,1,0,0,1,1,0,0,0,1,0,1,1,1,0,0,};
+
+__declspec (align(64)) data_t discount_case[32] =
+	{0,1,0,0,1,1,0,1,0,1,0,0,1,0,0,1,1,1,0,0,1,1,0,0,0,1,0,1,1,1,0,0,};
+
+q19params test_params_case = {
+	.brand = 0,
+	.container = 1,
+	.max_quantity = 2,
+	.min_quantity = 0,
+};
+
 
 // should qualify:
 // 1, 1, 0, 0, 1, 0, 0, 0
@@ -125,6 +141,22 @@ template <typename F> void testq19_easy(F f){
 	ASSERT_EQ(64, result.sum);
 }
 
+template <typename F> void testq19_case(F f){
+	lineitem_parts d;
+	d.len = 32;
+	d.eprice = eprice_case;
+	d.discount = discount_case;
+
+	d.quantity = quantity_easy;
+	d.container = container_easy;
+	d.brand = brand_case;
+		
+	auto result = f(d, test_params_case);
+	ASSERT_EQ(32, result.count);
+	ASSERT_EQ(1485, result.sum);
+}
+
+
 
 TEST(q19lite, all_masked_scalar) {
 	testq19(q19lite_all_masked_scalar);
@@ -144,6 +176,14 @@ TEST(q19lite, gather) {
 
 TEST(q19lite, gather_easy) {
 	testq19_easy(q19lite_gather);
+}
+
+TEST(q19lite, gather_case) {
+	testq19_case(q19lite_gather);
+}
+
+TEST(q19lite, branch_case) {
+	testq19_case(q19lite_all_branched);
 }
 
 TEST(vector, vec){

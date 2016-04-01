@@ -124,6 +124,27 @@ red_res count_words_elts(T *d, size_t len, Pred pred, size_t elts_per_cache_line
 }
 
 
+void print_parts(lineitem_parts *p){
+ 	printf("data_t brands[%lu] = {", p->len);
+	for (int i = 0; i < p->len; ++i) {
+		cout << p->brand[i] << ",";
+	}
+	printf("};\n");
+
+	printf("data_t eprice[%lu] = {", p->len);
+	for (int i = 0; i < p->len; ++i) {
+		cout << p->eprice[i] << ",";
+	}
+	printf("};\n");
+
+	printf("data_t discount[%lu] = {", p->len);
+	for (int i = 0; i < p->len; ++i) {
+		cout << p->discount[i] << ",";
+	}
+	printf("};\n");
+}
+
+
 q19res q19_expected = {-1, -1};
 
 
@@ -154,7 +175,7 @@ void init_q19data() {
 		throw std::runtime_error("need at least one brand");
 	}
 	
-	vector<int> num_distinct_values({FLAGS_num_brands, 1, 8, 1, 99});
+	vector<int> num_distinct_values({FLAGS_num_brands, 1, 8, 2, 2});
 	vector<int> max_values;
 	for (auto & i: num_distinct_values) {
 		max_values.push_back(i - 1);
@@ -195,6 +216,7 @@ void init_q19data() {
 		q19lite_cluster(g_q19data, params1, g_clustered_q19data);
 	}
 
+	//print_parts(&g_q19data);
 }
 
 void report_selectivities(red_res r, size_t data_len){
@@ -259,8 +281,11 @@ template <typename Func> void q19_template(benchmark::State & state, Func f) {
 			uint64 write =  getBytesWrittenToMC (before, after);
 			cout  << "MBs read from MC: " << (read >> 20) << endl;
 			cout  << "MBs written to MC: " << (write >> 20) << endl;
+			cout.flush();
 	}
-	
+
+	cout  << "result sum: " << res.sum << endl;
+	cout  << "result count: " << res.count << endl;
 	
 	ASSERT_EQ(q19_expected.count, res.count);
 	ASSERT_EQ(q19_expected.sum, res.sum);

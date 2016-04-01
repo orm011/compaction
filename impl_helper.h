@@ -170,6 +170,38 @@ template <> void buffer_addresses<int8_t>(uint32_t *iptr, const int8_t * startbr
 	}
 }
 
+template <> void buffer_addresses<int16_t>(uint32_t *iptr, const int16_t * startbrand, int *jptr, uint32_t *buf, const q19params &p1)
+{
+	auto &i = *iptr;
+	auto &j = *jptr;
+	vec_t currbrands;
+	currbrands.load_a(&startbrand[i]);
+	auto quals = currbrands == p1.brand; // 16 entries.
+	
+	// gets mask for the 8 shorts in odd positions (1,3,7...15)
+	auto odds_mask = _mm256_movemask_ps(_mm256_castsi256_ps(quals));
+
+	Vec8ui offset_mask;
+	// now store odd postions to buffer
+	offset_mask.load_a(&mask_table[odds_mask]);
+	auto actual_odd_offsets = _mm256_add_epi32(_mm256_add_epi32(_mm256_slli_epi32(offset_mask, 1), _mm256_set1_epi32(1)), _mm256_set1_epi32(i));
+	_mm256_storeu_si256((__m256i*)&buf[j], actual_odd_offsets);
+	j+=_mm_popcnt_u64(odds_mask);
+
+
+	// shifts the 8 shorts in even positions to the odd positions.
+  auto evens =  _mm256_slli_epi32(quals, 16);
+	auto evens_mask = _mm256_movemask_ps(_mm256_castsi256_ps(evens));
+	// now store evens to buffer
+	offset_mask.load_a(&mask_table[evens_mask]);
+	auto actual_even_offsets = _mm256_add_epi32(_mm256_slli_epi32(offset_mask, 1),
+																							_mm256_set1_epi32(i));
+	_mm256_storeu_si256((__m256i*)&buf[j], actual_even_offsets);
+	j+=_mm_popcnt_u64(evens_mask);
+}
+
+
+
 template <> void buffer_addresses<int32_t>(uint32_t *iptr, const int32_t * startbrand, int *jptr, uint32_t *buf, const q19params &p1)
 {
 	auto &i = *iptr;
