@@ -170,6 +170,23 @@ template <> void buffer_addresses<int8_t>(uint32_t *iptr, const int8_t * startbr
 	}
 }
 
+template <> void buffer_addresses<int32_t>(uint32_t *iptr, const int32_t * startbrand, int *jptr, uint32_t *buf, const q19params &p1)
+{
+	auto &i = *iptr;
+	auto &j = *jptr;
+	vec_t currbrands;
+	currbrands.load_a(&startbrand[i]);
+	auto quals = currbrands == p1.brand;
+	auto charmask = _mm256_movemask_ps(_mm256_castsi256_ps(quals));
+	auto delta_j = _mm_popcnt_u64(charmask);
+	vec_t perm_mask;
+	perm_mask.load_a(&mask_table[charmask]);
+	auto store_mask = _mm256_permutevar8x32_epi32(quals, perm_mask);
+	auto store_pos = perm_mask + i;
+	_mm256_maskstore_epi32((int*)&buf[j], store_mask, store_pos);
+	j+=delta_j;
+}
+
 
 template <> typename vec<int8_t>::t gather<int8_t>(uint32_t const * index, int8_t * table){
 
