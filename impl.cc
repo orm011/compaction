@@ -227,7 +227,7 @@ q19res q19lite_gather (const lineitem_parts &d, q19params p1) {
 
 
 
-void q19lite_cluster (const lineitem_parts &d, q19params p1, lineitem_parts &output) {
+void q19lite_cluster (lineitem_parts &d, q19params p1) {
 	using namespace tbb;
 	auto body = [&](const auto & range)  {
 		auto len = range.end() - range.begin();
@@ -238,11 +238,6 @@ void q19lite_cluster (const lineitem_parts &d, q19params p1, lineitem_parts &out
 		auto container = &d.container[range.begin()];
 		auto discount  = &d.discount[range.begin()];
 
-		auto obrand = &output.brand[range.begin()];
-		auto oeprice  = &output.eprice[range.begin()];
-		auto oquantity = &output.quantity[range.begin()];
-		auto ocontainer = &output.container[range.begin()];
-		auto odiscount  = &output.discount[range.begin()];
 		int output_j = 0;
 		
 		__declspec(align(64)) uint32_t buf_pos[k_elts_per_buf] {};
@@ -279,11 +274,11 @@ void q19lite_cluster (const lineitem_parts &d, q19params p1, lineitem_parts &out
 			}
 
 			for (int i = 0; i < buf_size; i += 1 ) {
-					obrand[output_j] = buf_brand[i];
-					oeprice[output_j] = buf_eprice[i];
-					oquantity[output_j] = buf_quantity[i];
-					ocontainer[output_j] = buf_container[i];
-					odiscount[output_j] = buf_discount[i];					
+					brand[output_j] = buf_brand[i];
+					eprice[output_j] = buf_eprice[i];
+					quantity[output_j] = buf_quantity[i];
+					container[output_j] = buf_container[i];
+					discount[output_j] = buf_discount[i];					
 					output_j ++;
 			}
 		};

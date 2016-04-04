@@ -211,11 +211,6 @@ void init_q19data() {
 	params1.max_quantity = 8;
 	params1.min_quantity = 0;
 
-	if (FLAGS_clustered){
-		g_clustered_q19data = alloc_lineitem_parts(FLAGS_array_size_elts);
-		q19lite_cluster(g_q19data, params1, g_clustered_q19data);
-	}
-
 	//print_parts(&g_q19data);
 }
 
@@ -242,6 +237,7 @@ template <typename Func> void q19_template(benchmark::State & state, Func f) {
 
   if ( q19_expected.count < 0) {
 		tbb::task_scheduler_init init_disable(1); // reference always runs serially
+		// run the unclustered version to make sure clustering did not change the result.
 		q19_expected = q19lite_all_branched(g_q19data, params1);
 
 
@@ -251,9 +247,17 @@ template <typename Func> void q19_template(benchmark::State & state, Func f) {
 		ASSERT_EQ(counts.elts, q19_expected.count); // make sure the other predicates aren't filtering out things for now.
 
 		if (FLAGS_clustered){
+			q19lite_cluster(g_q19data, params1);
+			g_clustered_q19data = g_q19data;
+
 			auto counts = count_words_elts(g_clustered_q19data.brand, g_clustered_q19data.len, brand_pred, k_elts_per_line);
 			cerr << "stats for clustered data" << endl;
 			report_selectivities(counts, g_clustered_q19data.len);		
+
+			auto after_clustering = q19lite_all_branched(g_clustered_q19data, params1);
+			
+			ASSERT_EQ(q19_expected.count, after_clustering.count);
+			ASSERT_EQ(q19_expected.sum, after_clustering.sum);
 		}
 	}
 

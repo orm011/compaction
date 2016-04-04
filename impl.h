@@ -63,4 +63,4 @@ q19res q19lite_all_masked_scalar(const lineitem_parts &, q19params);
 q19res q19lite_all_masked_vectorized(const lineitem_parts &, q19params);
 q19res q19lite_all_branched(const lineitem_parts &, q19params);
 q19res q19lite_gather (const lineitem_parts &d, q19params);
-void q19lite_cluster(const lineitem_parts &, q19params, lineitem_parts &);
+void q19lite_cluster(lineitem_parts &, q19params);
