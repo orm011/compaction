@@ -31,7 +31,7 @@ template <> struct vec<int64_t> {
 
 typedef vec<data_t>::t vec_t;
 
-const static size_t k_buf_size = 2048;
+const static size_t k_buf_size = 8192;
 const static size_t k_vec_size = sizeof(vec_t);
 static_assert(k_buf_size % k_vec_size == 0, "vector must divide buffer");
 static_assert(k_vec_size % sizeof(data_t) == 0, "data_t must divide vector");
