@@ -31,7 +31,7 @@ template <> struct vec<int64_t> {
 
 typedef vec<data_t>::t vec_t;
 
-const static size_t k_buf_size = 8192;
+const static size_t k_buf_size = 2048;
 const static size_t k_vec_size = sizeof(vec_t);
 static_assert(k_buf_size % k_vec_size == 0, "vector must divide buffer");
 static_assert(k_vec_size % sizeof(data_t) == 0, "data_t must divide vector");
@@ -157,12 +157,7 @@ template <> void buffer_addresses<int8_t>(uint32_t *iptr, const int8_t * startbr
 	currbrands.load_a(&startbrand[i]);
 	auto quals = currbrands == p1.brand;
 	auto bigmask = _mm256_movemask_epi8(quals);
-	/* auto upper_mask = _mm256_extracti128_si256(); */
-
-	/* auto mask0 = = _mm256_cvtepi8_epi64(bigmask) */
 	
-	/* auto mask1 = = _mm256_cvtepi8_epi64(bigmask); */	
-
 	for (int sub = 0; sub < 4; ++sub) {
 		auto charmask = (bigmask >> sub*8) & 0xff; // pick the lowest 8 bits
 		auto delta_j = _mm_popcnt_u64(charmask);
@@ -170,10 +165,7 @@ template <> void buffer_addresses<int8_t>(uint32_t *iptr, const int8_t * startbr
 		perm_mask.load_a(&mask_table[charmask]);
 		auto offset = i + sub*8;
 		perm_mask += offset;
-		Vec8ui store_mask;
-		store_mask.load_a(&storemask_table[delta_j])
-		_mm256_cvtepi8_epi64(__m128i);
-		_mm256_maskstore_epi32((int*)&buf[j], store_mask, perm_mask);
+		_mm256_storeu_si256((__m256i*)&buf[j], perm_mask);
 		j+=delta_j;
 	}
 }
