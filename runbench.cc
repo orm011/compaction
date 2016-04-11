@@ -23,6 +23,7 @@ DEFINE_int32(array_size_mb, -1, "data size (MB)");
 DEFINE_int32(limit_lower, 64, "lower limit");
 DEFINE_int32(limit_upper, 96, "upper limit");
 DEFINE_int32(num_brands, 100, "selectivity of first predicate is 1/num_brands");
+DEFINE_int32(zero_sel, 1, "how often do we keep our zero (1/n)");
 
 DEFINE_int32(threads, 4, "upper limit");
 DEFINE_bool(sorted, false, "sorted");
@@ -44,7 +45,10 @@ const int quarter = middle >> 1;
 const int threeq = middle + quarter;
 PCM * m = nullptr;
 
-template <typename T> void init_data(T *d, size_t len, int32_t max)
+// zero means we keep a zero every how many items. 1 means always.
+// 2 means every 2nd.
+// so, selectivity of pred  == 0 is 1/max * 1/ zero.
+template <typename T> void init_data(T *d, size_t len, int32_t max, int32_t zero)
 {
 
 	using namespace tbb;
@@ -64,7 +68,12 @@ template <typename T> void init_data(T *d, size_t len, int32_t max)
 		uint32_t seed = r.begin();
 		
 		for (int i = r.begin(); i < r.end(); ++i) {
-			d[i] = (T)(rand_r(&seed) % (max+1));
+			 auto elt = (T)(rand_r(&seed) % (max+1));
+			 if (elt == 0){
+				 int offset = (T)(rand_r(seed) % zero);
+				 elt += offset;
+			 }
+			 d[i] = elt;
 		}
 	};
 	
@@ -184,12 +193,12 @@ void init_q19data() {
 	/*brand, container, quantity, eprice, discount */
 	g_q19data = alloc_lineitem_parts(FLAGS_array_size_elts);
 	
-	init_data(g_q19data.brand, FLAGS_array_size_elts, max_values[0]);
-	init_data(g_q19data.container, FLAGS_array_size_elts, max_values[1]);
-	init_data(g_q19data.quantity, FLAGS_array_size_elts, max_values[2]);
+	init_data(g_q19data.brand, FLAGS_array_size_elts, max_values[0], FLAGS_zero_sel);
+	init_data(g_q19data.container, FLAGS_array_size_elts, max_values[1], FLAGS_zero_sel);
+	init_data(g_q19data.quantity, FLAGS_array_size_elts, max_values[2], FLAGS_zero_sel);
 	
-	init_data(g_q19data.eprice, FLAGS_array_size_elts, max_values[3]);
-	init_data(g_q19data.discount, FLAGS_array_size_elts, max_values[4]);
+	init_data(g_q19data.eprice, FLAGS_array_size_elts, max_values[3], FLAGS_zero_sel);
+	init_data(g_q19data.discount, FLAGS_array_size_elts, max_values[4], FLAGS_zero_sel);
 
 	if (FLAGS_sorted) {
 		auto rows = allocate_aligned<q19row>(g_q19data.len);
