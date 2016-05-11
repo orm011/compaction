@@ -70,7 +70,7 @@ template <typename T> void init_data(T *d, size_t len, int32_t max, int32_t zero
 		for (int i = r.begin(); i < r.end(); ++i) {
 			 auto elt = (T)(rand_r(&seed) % (max+1));
 			 if (elt == 0){
-				 int offset = (T)(rand_r(seed) % zero);
+				 int offset = (T)(rand_r(&seed) % zero);
 				 elt += offset;
 			 }
 			 d[i] = elt;
@@ -228,11 +228,11 @@ void report_selectivities(red_res r, size_t data_len){
 
 	auto word_sel = (((double) r.words) / total_words ) * 100;
 	auto word_MB = (r.words * 64) >> 20;
-	fprintf(stderr, "cache line level selectivity:\t%llu / %llu = %.1f %% ( %llu MB )\n", r.words, total_words, word_sel, word_MB);
+	fprintf(stderr, "cache line level selectivity:\t%llu / %llu = %.4f %% ( %llu MB )\n", r.words, total_words, word_sel, word_MB);
 
 	auto elt_sel = (((double) r.elts) / data_len ) * 100;
 	auto elt_MB = (r.elts *sizeof(data_t)) >> 20;
-	fprintf(stderr, "row level selectivity:\t%llu / %llu = %.1f %% ( %llu MB )\n", r.elts, data_len, elt_sel, elt_MB);
+	fprintf(stderr, "row level selectivity:\t%llu / %llu = %.4f %% ( %llu MB )\n", r.elts, data_len, elt_sel, elt_MB);
 }
 
 template <typename Func> void q19_template(benchmark::State & state, Func f) {
